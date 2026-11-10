@@ -87,7 +87,7 @@
 </style>
 </head>
 <body>
-<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-10k</span></h1></header>
+<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-11a</span></h1></header>
 <main>
   <section class="card" aria-labelledby="mail-title">
     <h2 id="mail-title">이 메일</h2>
@@ -727,7 +727,7 @@ $("linkFile").addEventListener("change", async () => {
   const lines = f.size <= 4096 ? (await f.text()).replace(/^﻿/, "").split(/\r?\n/).map(x => x.trim()).filter(Boolean) : [];
   const url = lines[0] || "", token = lines[1] || "";
   $("linkFile").value = "";
-  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) { $("ledStatus").textContent = "1줄이 Apps Script 웹 앱 주소(…/exec)가 아닙니다."; return; }
+  if (!/^https:\/\/script\.google\.com\/[\w.\/-]+\/exec$/.test(url)) { $("ledStatus").textContent = "1줄이 Apps Script 웹 앱 주소(…/exec)가 아닙니다."; return; }
   if (token.length < 24 || /\s/.test(token)) { $("ledStatus").textContent = "2줄 토큰이 너무 짧거나 공백이 있습니다."; return; }
   setLink({ url, token }); liveFetch("file");
 });
