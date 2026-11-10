@@ -6,6 +6,8 @@
 <title>BWTS MRO Helper — Outlook</title>
 <!-- Outlook 애드인 API (Microsoft 제공). Outlook 밖에서 열면 "시험 입력" 칸으로 동작 -->
 <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<!-- Microsoft 로그인 라이브러리 (MSAL, Microsoft 공식) — 웹앱에서 내 Outlook 메일을 직접 읽기 (v10) -->
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.4/lib/msal-browser.min.js"></script>
 <style>
   /* 회사 디자인 표준(20_design-system.md) 값만 사용 */
   :root {
@@ -48,10 +50,20 @@
   .state { padding: var(--sp-md) var(--sp-sm); text-align: center; color: var(--gray-600); }
   details { margin-top: var(--sp-sm); }
   summary { cursor: pointer; font-weight: 600; }
+  .btn-primary { background: var(--primary-600); color: var(--color-card); border-color: transparent; }
+  .btn-primary:hover { background: var(--primary-700); }
+  .live-row { display: flex; flex-wrap: wrap; gap: var(--sp-xs) var(--sp-sm); align-items: center; }
+  .check { display: inline-flex; gap: var(--sp-xs); align-items: center; }
+  .mailitem { width: 100%; text-align: left; border: 1px solid var(--gray-200); border-left: 4px solid var(--lv, var(--gray-300)); border-radius: var(--radius-md); padding: var(--sp-sm); margin-bottom: var(--sp-xs); background: var(--color-card); cursor: pointer; font: inherit; color: var(--gray-900); }
+  .mailitem:hover { background: var(--primary-100); }
+  .mailitem.sel { border-left-color: var(--primary-500); background: var(--primary-100); }
+  .mailitem .subj { font-weight: 600; word-break: break-word; }
+  .mailitem .meta { font-size: var(--fs-caption); color: var(--gray-600); word-break: break-word; }
+  .mailitem .tag { font-size: var(--fs-caption); margin-top: var(--sp-xs); }
 </style>
 </head>
 <body>
-<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-10b</span></h1></header>
+<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-10c</span></h1></header>
 <main>
   <section class="card" aria-labelledby="mail-title">
     <h2 id="mail-title">이 메일</h2>
@@ -63,6 +75,25 @@
         <textarea id="testText"></textarea>
       </div>
       <button type="button" class="btn" id="testRun">대조하기</button>
+    </div>
+  </section>
+
+  <!-- 받은편지함에서 직접 가져오기 (v10, Microsoft 로그인) — 애드인 밖(웹앱)에서 쓸 때 -->
+  <section class="card" id="inboxCard" aria-labelledby="inbox-title" hidden>
+    <h2 id="inbox-title">받은편지함</h2>
+    <div id="signedOut">
+      <p class="muted" style="margin-top:0">내 Outlook 받은편지함의 최근 메일을 가져와 관리대장과 대조합니다. 읽기 전용이며, 메일을 저장하거나 외부로 보내지 않습니다.</p>
+      <button type="button" class="btn btn-primary" id="msSignIn">Microsoft 로그인</button>
+      <div class="hint" id="msStatus" aria-live="polite"></div>
+    </div>
+    <div id="signedIn" hidden>
+      <div class="live-row" style="margin-bottom:var(--sp-sm)">
+        <span class="muted" id="msWho"></span>
+        <button type="button" class="btn" id="msRefresh">새로고침</button>
+        <button type="button" class="btn" id="msSignOut">로그아웃</button>
+        <label class="check" style="margin:0"><input type="checkbox" id="msMineOnly"> 내 건만</label>
+      </div>
+      <div id="mailList" aria-live="polite"></div>
     </div>
   </section>
 
@@ -324,6 +355,85 @@ $("linkRemember").addEventListener("change", () => setLink(link));
 $("liveNow").addEventListener("click", () => liveFetch("button"));
 $("linkClear").addEventListener("click", () => { setLink(null); $("ledStatus").textContent = "연결 정보를 지웠습니다. (불러온 관리대장은 남아 있음 — 지우려면 아래 \"저장된 관리대장 지우기\")"; });
 
+/* ===== 받은편지함 직접 가져오기 (v10) — Microsoft Graph =====
+   클라이언트 ID·테넌트 ID는 공개돼도 되는 값(비밀 아님). 로그인은 Microsoft 공식 팝업(MSAL),
+   비밀번호는 코드에 없고 토큰은 브라우저 메모리에만. 권한 Mail.Read(읽기 전용). */
+const MS = { clientId: "c1e71838-c412-4b82-ab37-050a3b049b7b", tenantId: "9c2148c3-610b-4bdb-8fb9-c3f3c008c9f8" };
+const MS_SCOPES = ["User.Read", "Mail.Read"];
+let msApp = null, msAccount = null, msMails = [], msSelId = "";
+function msReady() {
+  if (msApp) return true;
+  if (!window.msal) { $("msStatus").textContent = "로그인 라이브러리를 불러오지 못했습니다 (인터넷·회사망 확인)."; return false; }
+  msApp = new msal.PublicClientApplication({
+    auth: { clientId: MS.clientId, authority: `https://login.microsoftonline.com/${MS.tenantId}`, redirectUri: location.origin + location.pathname },
+    cache: { cacheLocation: "sessionStorage" } }); // 창을 닫으면 로그인도 사라짐
+  const acc = msApp.getAllAccounts();
+  if (acc.length) { msAccount = acc[0]; }
+  return true;
+}
+async function msToken() {
+  try { const r = await msApp.acquireTokenSilent({ scopes: MS_SCOPES, account: msAccount }); return r.accessToken; }
+  catch { const r = await msApp.acquireTokenPopup({ scopes: MS_SCOPES }); msAccount = r.account; return r.accessToken; }
+}
+async function msSignIn() {
+  if (!msReady()) return;
+  $("msStatus").textContent = "로그인 창을 여는 중…";
+  try {
+    const r = await msApp.loginPopup({ scopes: MS_SCOPES, prompt: "select_account" });
+    msAccount = r.account; msShowSignedIn(); msLoadInbox();
+  } catch (e) { $("msStatus").textContent = "로그인하지 못했습니다: " + String(e.message || e).slice(0, 160); }
+}
+function msShowSignedIn() {
+  $("signedOut").hidden = true; $("signedIn").hidden = false;
+  $("msWho").textContent = msAccount ? (msAccount.name || msAccount.username) : "";
+}
+async function msLoadInbox() {
+  if (!msAccount) return;
+  $("mailList").replaceChildren(el("div", { class: "state", text: "받은편지함을 불러오는 중…" }));
+  try {
+    const token = await msToken();
+    // 최근 50건의 제목·보낸사람·받은날짜 (본문은 받지 않음 — 목록 대조는 제목으로 충분)
+    const url = "https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?$top=50&$select=id,subject,from,receivedDateTime,bodyPreview&$orderby=receivedDateTime desc";
+    const res = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+    if (!res.ok) throw new Error("Graph 오류 " + res.status + (res.status === 403 ? " (메일 읽기 권한 동의가 필요합니다)" : ""));
+    const data = await res.json();
+    msMails = (data.value || []).map(m => ({ id: m.id, subject: m.subject || "(제목 없음)",
+      from: (m.from && m.from.emailAddress && (m.from.emailAddress.name || m.from.emailAddress.address)) || "",
+      at: m.receivedDateTime ? m.receivedDateTime.slice(0, 10) : "", text: (m.subject || "") + "\n" + (m.bodyPreview || "") }));
+    renderInbox();
+  } catch (e) { $("mailList").replaceChildren(el("div", { class: "banner lv-warning" }, "받은편지함을 불러오지 못했습니다: " + String(e.message || e).slice(0, 160))); }
+}
+function renderInbox() {
+  const me = $("manager").value, mineOnly = $("msMineOnly").checked;
+  if (!msMails.length) { $("mailList").replaceChildren(el("div", { class: "state", text: "받은편지함이 비어 있습니다." })); return; }
+  const rows = msMails.map(m => {
+    const hits = (ledger && !ledger.error) ? matchMail(m.text) : [];
+    const mine = me && hits.some(x => splitNames(x.manager).includes(me));
+    return { m, hits, mine };
+  }).filter(r => !mineOnly || r.mine);
+  if (!rows.length) { $("mailList").replaceChildren(el("div", { class: "state", text: mineOnly ? "내 담당 선박과 맞는 메일이 없습니다." : "표시할 메일이 없습니다." })); return; }
+  const items = rows.map(({ m, hits, mine }) => {
+    const top = hits[0];
+    const lv = !hits.length ? "" : mine ? "success" : "inactive";
+    const btn = el("button", { type: "button", class: "mailitem" + (m.id === msSelId ? " sel" : "") + (lv ? " lv-" + lv : ""), "data-id": m.id },
+      el("div", { class: "subj", text: m.subject }),
+      el("div", { class: "meta", text: [m.from, m.at].filter(Boolean).join(" · ") }),
+      top ? el("div", { class: "tag" }, dot(stageOf(top.days).lv), `${top.vessel} · 담당 ${top.manager || "미지정"}${mine ? " (나)" : ""} · 칸반 ${LANES[top.stage]}`)
+          : el("div", { class: "tag muted", text: "관리대장에서 못 찾음" }));
+    btn.addEventListener("click", () => { msSelId = m.id; lastText = m.text; $("mailStatus").textContent = "제목: " + m.subject; renderHits(m.text); renderInbox(); document.getElementById("mail-title").scrollIntoView({ block: "start" }); });
+    return btn;
+  });
+  const mineN = rows.filter(r => r.mine).length;
+  $("mailList").replaceChildren(el("div", { class: "muted", style: "margin-bottom:var(--sp-xs)", text: `최근 ${msMails.length}건${me ? ` · 내 건 ${mineN}건` : ""}` }), ...items);
+}
+$("msSignIn").addEventListener("click", msSignIn);
+$("msRefresh").addEventListener("click", msLoadInbox);
+$("msMineOnly").addEventListener("change", renderInbox);
+$("msSignOut").addEventListener("click", async () => {
+  try { await msApp.logoutPopup({ account: msAccount }); } catch {}
+  msAccount = null; msMails = []; msSelId = ""; $("signedIn").hidden = true; $("signedOut").hidden = false; $("msStatus").textContent = "로그아웃했습니다.";
+});
+
 let started = false;
 function start(inOutlook) {
   if (started) return; started = true;
@@ -337,8 +447,11 @@ function start(inOutlook) {
     // 창을 고정한 경우 메일을 바꿀 때마다 다시 대조 (지원하는 Outlook에서만)
     try { Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, readCurrentMail); } catch {}
   } else {
-    $("mailStatus").textContent = "Outlook 밖에서 열렸습니다 — 아래 시험 입력 칸을 쓰세요.";
+    // 애드인 밖(웹앱): 시험 입력 + 받은편지함 직접 가져오기
+    $("mailStatus").textContent = "웹앱에서 열렸습니다 — 아래 \"받은편지함\"에서 Microsoft 로그인하거나, 시험 입력 칸을 쓰세요.";
     $("testBox").hidden = false;
+    $("inboxCard").hidden = false;
+    if (msReady() && msAccount) { msShowSignedIn(); msLoadInbox(); }
   }
 }
 if (window.Office && Office.onReady) Office.onReady(info => start(!!info && info.host === Office.HostType.Outlook));
