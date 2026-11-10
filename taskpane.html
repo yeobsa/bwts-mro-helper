@@ -66,10 +66,28 @@
   .sched summary { font-size: var(--fs-caption); color: var(--primary-700); }
   .sched .field { margin-bottom: var(--sp-xs); }
   .sched label { font-size: var(--fs-caption); margin-bottom: var(--sp-xs); }
+  .draft { margin-top: var(--sp-sm); border-top: 1px solid var(--gray-200); padding-top: var(--sp-sm); }
+  .draft summary { font-size: var(--fs-caption); color: var(--primary-700); }
+  .draft-item { margin-top: var(--sp-sm); padding-top: var(--sp-sm); border-top: 1px dashed var(--gray-300); }
+  .draft-title { font-weight: 600; font-size: var(--fs-caption); margin-bottom: var(--sp-xs); }
+  .draft-subj { width: 100%; padding: var(--sp-sm); font: inherit; color: var(--gray-900); border: 1px solid var(--gray-300); border-radius: var(--radius-md); background: var(--gray-50); margin: var(--sp-xs) 0; }
+  .draft-body { min-height: 180px; font-size: var(--fs-caption); }
+  .draft-check { margin: var(--sp-xs) 0 0; padding-left: 1.2em; font-size: var(--fs-caption); color: var(--gray-600); }
+  .fl { display: block; font-weight: 600; font-size: var(--fs-caption); margin-bottom: var(--sp-xs); }
+  .num-grid { display: flex; gap: var(--sp-sm); flex-wrap: wrap; margin-bottom: var(--sp-sm); }
+  .fl2 { font-size: var(--fs-caption); color: var(--gray-700); display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 56px; }
+  .num-in { width: 100%; padding: var(--sp-xs) var(--sp-sm); font: inherit; border: 1px solid var(--gray-300); border-radius: var(--radius-md); background: var(--color-card); }
+  .tasks { margin-top: var(--sp-sm); border-top: 1px solid var(--gray-200); padding-top: var(--sp-sm); }
+  .tasks summary { font-size: var(--fs-caption); color: var(--primary-700); }
+  .tasks .check { display: flex; align-items: flex-start; gap: var(--sp-xs); margin-top: var(--sp-xs); font-size: var(--fs-caption); }
+  .tasks .check label { font-weight: 400; }
+  .prog { display: inline-block; width: 56px; height: 6px; background: var(--gray-200); border-radius: var(--radius-sm); vertical-align: middle; overflow: hidden; }
+  .prog > span { display: block; height: 100%; background: var(--primary-500); }
+  .prog.full > span { background: var(--color-success); }
 </style>
 </head>
 <body>
-<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-10f</span></h1></header>
+<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-10i</span></h1></header>
 <main>
   <section class="card" aria-labelledby="mail-title">
     <h2 id="mail-title">이 메일</h2>
@@ -148,7 +166,7 @@ const FIELDS = [
   ["vessel", /vessel|호선|선박|선명|ship\s*name/i], ["expiry", /due|expir|만료|유효|교정/i], ["done", /실적/],
   ["attend", /attend|승선|방선|서비스\s*일|service\s*date/i], ["port", /port|항구|기항|place|장소|지역/i], ["country", /country|국가/i],
   ["po", /\bp\.?o\.?\b|발주/i], ["owner", /owner|선주|선사|client|고객/i], ["manager", /담당자|담당|manager|\bPIC\b/i],
-  ["remarks", /remark|비고/i], ["ready", /준비\s*완/], ["shipped", /출고/], ["paid", /수금/], ["returned", /구품/], ["prepDue", /준비\s*기한/],
+  ["remarks", /remark|비고/i], ["ready", /준비\s*완/], ["shipped", /출고/], ["paid", /수금/], ["returned", /구품/], ["prepDue", /준비\s*기한/], ["invoice", /invoice\s*no/i],
 ];
 const STORE = { main: "bwtsAddinMain.v1", ref: "bwtsAddinRef.v1", manager: "bwtsAddinManager.v1", link: "bwtsAddinLink.v1", liveAt: "bwtsAddinLiveAt.v1" };
 const LIVE_SHEETS = { main: "2026", ref: "2025" }, LIVE_MAX_AGE = 5 * 60 * 1000; // 5분 지난 관리대장이면 창을 열 때 새로 읽음
@@ -250,11 +268,12 @@ function buildLedger() {
     items.push({ vessel, vkey, words: cleanVessel(vessel).replace(/[^A-Z0-9가-힣]+/g, " ").trim(), po, poKey: poKeyOf(po),
       owner: get(r, "owner"), manager: get(r, "manager"), port: get(r, "port"), country: get(r, "country"), attRaw: get(r, "attend"),
       rowNo: A.header + j + 2, prepDue: get(r, "prepDue"),
+      ready: get(r, "ready"), shipped: get(r, "shipped"), doneRaw, paidOk, invoice: get(r, "invoice"),
       stage: isFilled(doneRaw) ? 3 : (isFilled(get(r, "shipped")) || isFilled(get(r, "ready"))) ? 2 : get(r, "attend") ? 1 : 0,
       finished: paidOk && isReturned(returned), done, returned, expiry, expSrc, days: expiry ? daysBetween(today, expiry) : null });
   });
   const managers = [...new Set(items.flatMap(x => splitNames(x.manager)))].sort((a, b) => a.localeCompare(b, "ko"));
-  ledger = { items, managers, mainName: main.name, refCount: refBy.size, refName: refText ? JSON.parse(refText).name : "", live: Array.isArray(main.rows) };
+  ledger = { items, managers, mainName: main.name, refCount: refBy.size, refName: refText ? JSON.parse(refText).name : "", live: Array.isArray(main.rows), returnedCol: A.map.returned !== undefined };
 }
 function renderSettings() {
   const sel = $("manager"), saved = store.get(STORE.manager) || "";
@@ -318,6 +337,289 @@ function schedulePanel(x) {
     el("div", { class: "field" }, el("label", { for: id + "s", text: "배송 방식" }), ship),
     preview, btn, msg);
 }
+/* ===== 메일 초안 (본 도구 v9 템플릿 그대로) — 관리대장만으로 자동 생성되는 2종 =====
+   장기 스케줄 요청(만료 120일 이내) · 구품 반납 독촉(방선 D+30 미반납).
+   완료 보고·인보이스는 센서 수량·금액 등 손입력이 필요해 메인 도구에서 만듭니다. */
+const EN_MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmtEnDate = d => `${d.getDate()} ${EN_MON[d.getMonth()]} ${d.getFullYear()}`;
+const TAGS = { schedule: "[REQUEST FOR VESSEL SCHEDULE]", sensorReturn: "[SENSOR RETURN REQUEST]", invoice: "[INVOICE]", invoiceCost: "[COST BREAKDOWN & INVOICE]", completion: "[MRO COMPLETION]", reminder: "[FINAL PAYMENT REMINDER]" };
+const RMA_CLAUSE = "The cost of supplying the new replacement sensor will be covered by PANASIA, on the condition that the old sensor is returned to PANASIA HQ once replaced onboard.";
+const INVOICE_FROM_DAY = 20, PREFERRED_PORTS = ["BUSAN", "SINGAPORE", "MASAN", "ULSAN"];
+const isFixedPort = p => { const s = String(p || "").toUpperCase(); return PREFERRED_PORTS.some(x => s === x || s.includes(x)); };
+const BANNED_WORDS = [
+  { re: /\bsuccessful(ly)?\b/i, label: "successfully" }, { re: /\bperfect(ly)?\b|\bsmoothly\b|\bexcellent\b/i, label: "perfectly/smoothly/excellent" },
+  { re: /\bMEPC\b/i, label: "MEPC" }, { re: /\bVGP\b/i, label: "VGP" }, { re: /\bcompl(y|ied|ies|iance|iant)\b|준수/i, label: "comply/compliance/준수" },
+  { re: /extend(ed|s)?\s+(the\s+)?validity|validity\s+(is|was|has\s+been)?\s*extended|유효\s*기간\s*연장/i, label: "유효기간 연장" }, { re: /\bvalid\s+until\b/i, label: "valid until" },
+];
+const num = v => v === "" || v == null ? null : Number(v);
+const money = n => "USD " + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const parseYMD = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+function parseActual(text) {
+  const items = [], bad = [];
+  for (const ln of String(text || "").split("\n").map(x => x.trim()).filter(Boolean)) {
+    const m = /^(.+?)\s*[:：\-–]?\s*(?:USD|US\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(?:USD)?$/i.exec(ln);
+    if (m && m[1].trim()) items.push({ name: m[1].replace(/[:：\-–]\s*$/, "").trim(), amount: Number(m[2].replace(/,/g, "")) }); else bad.push(ln);
+  }
+  return { items, bad, total: Math.round(items.reduce((s, x) => s + x.amount, 0) * 100) / 100 };
+}
+const textBanned = parts => BANNED_WORDS.filter(w => w.re.test(parts.filter(Boolean).join("\n"))).map(w => w.label);
+const RETURN_PROCEDURE = `■ BWTS MRO Sensor Return Procedure
+Replaced sensors (either the original ship sensor or the rental sensor) must be promptly returned to PANASIA in order to carry out calibration and the remaining MRO services in a timely manner.
+
+Once the sensor exchange is completed, pack the replaced sensors in the same box and hand them over to the designated shipping agent for shipment. For consignee details and shipping guidelines, please refer to the details below.
+
+It is strongly recommended to arrange landing and international shipment of the replaced sensors at the same port where the replacement took place, considering the vessel's long-term schedule. Failure to do so, and keeping the sensors onboard during voyages may result in significant delays in sensor restoration.
+
+Furthermore, although the timeline may vary depending on the contract, the dispatch deadline for returning the replaced sensors is clearly stated in the MRO service contract. An additional cost, typically USD 150 per day will be charged if the shipment is delayed due to the owner's negligence, unless unforeseen circumstances arise.
+
+Below are the guidelines and consignee information for the shipment:
+- Invoice Amount: Less than USD 100 (sensor unit price to be USD 10.00 each or less)
+- Packing List / Description: Ship Spares or Sensors
+- PIC / Delivered to: BWTS MRO Service ([PIC name])
+- Address: PANASIA CO., LTD. (Head Office), 55 Mieumsandan 3-ro, Gangseo-gu, Busan, Republic of Korea 46744
+- Office / Mobile Number: [office / mobile]
+- Email: mro@worldpanasia.com
+- Packing Detail: N/A
+
+■ Precautions Before Return
+- The invoice amount is recommended to be below USD 100 for faster customs clearance.
+- The quantity of replaced sensors must be thoroughly verified before disembarkation from the vessel.
+
+■ BWTS MRO Replaced Sensor List
+1. Pressure Transmitter
+2. Temperature Transmitter
+3. UV Intensity Sensor`;
+function mailSubject(tag, x, place) { return `${tag} BWTS MRO | ${x.vessel} | ${place || x.port || "TBA"} | PO ${x.po || "TBA"} | ${x.owner || ""}`; }
+function expiryStageOf(days) {
+  if (days === null || days === undefined) return null;
+  if (days <= 0) return "expired";
+  if (days <= RULES.expiryDecideDays) return "decide";
+  if (days <= RULES.expiryScheduleDays) return "schedule";
+  if (days <= RULES.expiryContactDays) return "contact";
+  return null;
+}
+function draftScheduleFor(x) {
+  const stg = expiryStageOf(x.days);
+  if (!stg || !x.expiry) return null;
+  const exp = fmtEnDate(x.expiry), from = new Date(x.expiry); from.setDate(from.getDate() - RULES.expiryScheduleDays);
+  const ASK = {
+    contact: `Please be advised that the calibration of the BWTS sensors onboard is due on ${exp}.\n\nWith your consent, we would like to start scheduling the calibration service from three months prior to the due date (i.e. from ${fmtEnDate(from)}).\n\nFor our planning, could you kindly advise whether the vessel has any upcoming calls at Busan or Singapore, or any plans to trade in Asia or Europe? If available, we would also appreciate it if you could share the vessel's long-term schedule.`,
+    schedule: `As the calibration of the BWTS sensors onboard is due on ${exp}, we would now like to arrange the calibration service.\n\nCould you kindly share the vessel's latest schedule for the coming months, so that we can propose a suitable attendance port (preferably Busan or Singapore, or a main port in Asia or Europe)?`,
+    decide: `As the calibration of the BWTS sensors onboard is due on ${exp}, we need to decide on the attendance port to secure sensor preparation (minimum two weeks) and engineer mobilization.\n\nCould you kindly share the vessel's latest port rotation, and advise which of the upcoming calls would be most suitable for the attendance?`,
+    expired: `Please be advised that the calibration of the BWTS sensors onboard was due on ${exp}.\n\nKindly share the vessel's upcoming schedule at your earliest convenience so that we can arrange the calibration service as soon as possible.`,
+  };
+  return { title: "장기 스케줄 요청", subject: mailSubject(TAGS.schedule, x, x.port || "TBA"),
+    body: `Dear Mr. Superintendent,\n\nGood day.\n\nWe are writing regarding the annual BWTS sensor calibration (MRO) service for M/V ${x.vessel}.\n\n${ASK[stg]}\n\nThank you for your cooperation.`,
+    checklist: ["수신자: 선주 기술감독(Superintendent)", `센서 교정 만료일(${exp})이 맞는지`] };
+}
+function draftReturnFor(x) {
+  if (!x.done || isReturned(x.returned)) return null;
+  const since = daysBetween(x.done, new Date());
+  if (since < RULES.returnAfterDays) return null;
+  const place = x.port + (x.country ? ", " + x.country : "");
+  return { title: `구품 반납 독촉 (D+${since})`, subject: mailSubject(TAGS.sensorReturn, x),
+    body: `Dear Superintendent,\n\nGood day.\n\nThis is a kind reminder regarding the replaced BWTS sensors from the MRO service onboard M/V ${x.vessel}${x.port ? ` at ${place}` : ""} on ${fmtEnDate(x.done)}.\n\nAs of today, ${since} days have passed since the service, and the replaced sensors have not yet been received at PANASIA. Kindly arrange the return of the replaced sensors in accordance with the procedure below, and share the shipping details (forwarder and AWB / tracking number) once dispatched.\n\n${RETURN_PROCEDURE}\n\nThank you for your cooperation.`,
+    checklist: ["받는 사람 — 선주 또는 서비스 진행 본선", "관리대장 구품회수 칸 재확인 (그사이 도착했는지)", "[PIC name]·[office / mobile] 빈칸 채우기"] };
+}
+function fallbackCopy(text, done) {
+  const t = document.createElement("textarea"); t.value = text; t.style.position = "fixed"; t.style.opacity = "0"; document.body.append(t); t.select();
+  try { document.execCommand("copy"); done(); } catch {} t.remove();
+}
+function copyText(text, btn) {
+  const done = () => { const o = btn.textContent; btn.textContent = "복사됨 ✓"; setTimeout(() => { btn.textContent = o; }, 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+  else fallbackCopy(text, done);
+}
+function draftPanel(x) {
+  const drafts = [draftScheduleFor(x), draftReturnFor(x)].filter(Boolean);
+  if (!drafts.length) return null;
+  const box = el("details", { class: "draft" }, el("summary", {}, `✉ 메일 초안 (${drafts.length})`));
+  for (const d of drafts) {
+    const subj = el("input", { type: "text", class: "draft-subj", value: d.subject, readonly: "" });
+    const ta = el("textarea", { class: "draft-body" }); ta.value = d.body;
+    const subjBtn = el("button", { type: "button", class: "btn", text: "제목 복사" });
+    subjBtn.addEventListener("click", () => copyText(d.subject, subjBtn));
+    const copyBtn = el("button", { type: "button", class: "btn btn-primary", text: "본문 복사" });
+    copyBtn.addEventListener("click", () => copyText(ta.value, copyBtn));
+    box.append(el("div", { class: "draft-item" },
+      el("div", { class: "draft-title", text: d.title }),
+      el("label", { class: "hint", text: "제목" }), subj,
+      el("label", { class: "hint", text: "본문 (고친 뒤 복사해 새 메일에 붙여넣으세요 — 서명은 Outlook 것 사용)" }), ta,
+      el("div", { class: "live-row" }, subjBtn, copyBtn),
+      el("ul", { class: "draft-check" }, ...d.checklist.map(c => el("li", { text: c })))));
+  }
+  return box;
+}
+/* ===== 완료 보고 · 인보이스 (본 도구 v9 템플릿 그대로) — 손입력 폼 필요 ===== */
+function buildCompletion(x, i) {
+  const workDate = i.workDate ? parseYMD(i.workDate) : x.done;
+  if (!x.port) return { error: "항구 정보가 없습니다 (관리대장 기항 항구 칸)." };
+  const hasReport = i.sensorNotArrived || [i.nUvi, i.nTemp, i.nPress, i.nFlow].some(v => v !== "" && v != null);
+  if (!hasReport) return { error: "센서 교체 수량 또는 '신규 센서 미도착'을 입력하세요." };
+  if (!workDate) return { error: "작업일을 입력하세요 (관리대장 실적일이 없으면)." };
+  const lines = t => (t || "").split("\n").map(s => s.replace(/^\s*[-*•]\s*/, "").trim()).filter(Boolean);
+  const bullets = arr => arr.map(s => "- " + s).join("\n");
+  const cnt = v => (v === "" || v == null ? 0 : Math.max(0, Math.floor(Number(v))));
+  const sensors = [["UV Intensity Sensor", cnt(i.nUvi)], ["Temperature Sensor", cnt(i.nTemp)], ["Pressure Sensor", cnt(i.nPress)]].filter(s => s[1] > 0);
+  const flow = cnt(i.nFlow), op = i.opTest || "done", place = x.port + (x.country ? ", " + x.country : "");
+  const acts = [];
+  if (!i.sensorNotArrived && sensors.length) acts.push("sensor calibration/replacement");
+  acts.push("BWTS condition inspection");
+  if (op !== "notdone") acts.push("operating test");
+  if (i.crewTraining) acts.push("crew training");
+  const actText = acts.length > 2 ? acts.slice(0, -1).join(", ") + ", and " + acts[acts.length - 1] : acts.join(" and ");
+  const work = [];
+  if (!i.sensorNotArrived) sensors.forEach(([n, c]) => work.push(`${n}: ${c} EA replaced`));
+  if (flow) work.push(`Flowmeter: ${flow} EA verified`);
+  work.push("Filter Unit, UV Unit, EHS Valve, Control Panel, and UV Power Supply Panel inspected");
+  if (op === "done") work.push("BWTS operating test completed");
+  if (op === "partial") work.push("BWTS operating test partially completed");
+  if (i.crewTraining) work.push("Crew training completed");
+  const sections = [];
+  let workSec = bullets(work);
+  if (op === "done" && (i.opNote || "").trim()) workSec += "\n\n" + i.opNote.trim();
+  sections.push(["Work Completed", workSec]);
+  if (op !== "done") sections.push(["Operating Test", (i.opNote || "").trim() || (op === "notdone" ? "The BWTS operating test could not be completed during the attendance." : "The BWTS operating test was partially completed during the attendance.")]);
+  if (i.sensorNotArrived) sections.push(["Sensor Replacement", "The following new calibrated sensors had not yet been delivered onboard at the time of attendance:\n" + (sensors.length ? bullets(sensors.map(([n, c]) => `${n}: ${c} EA`)) : "- New calibrated sensors") + "\n\nTherefore, the sensors were not replaced by the attending engineer.\nThe vessel crew was instructed on how to replace the sensors once they are delivered onboard."]);
+  const issues = lines(i.dIssues), req = lines(i.dRequired), rec = lines(i.dRecommended);
+  if (!issues.length && !req.length && !rec.length) sections.push(["Outstanding / Required Spare", "- No outstanding issue identified\n- No required spare identified\n- No recommended spare identified"]);
+  else { sections.push([issues.length > 1 ? "Outstanding Issues" : "Outstanding Issue", issues.length ? bullets(issues) : "- No outstanding issue identified"]); if (req.length) sections.push(["Required Spares", bullets(req)]); if (rec.length) sections.push(["Recommended Spares", bullets(rec)]); }
+  const consumed = lines(i.dConsumed), remarks = [];
+  if (consumed.length) remarks.push("Engineer spare parts were used during the service as follows:\n" + consumed.map(s => "  - " + s).join("\n"));
+  if (i.oldTaken && !i.sensorNotArrived) remarks.push("The removed old sensors were taken ashore by the attending engineer.");
+  lines(i.dRemarks).forEach(s => remarks.push(s));
+  if (remarks.length) sections.push(["Additional Remarks", remarks.map(s => "- " + s).join("\n")]);
+  const banned = textBanned([i.opNote, i.dIssues, i.dRequired, i.dRecommended, i.dConsumed, i.dRemarks]);
+  const body = `Dear Superintendents / Technical Team,\n\nGood day.\n\nWe would like to inform you that the scheduled BWTS MRO service for M/V ${x.vessel} was carried out at ${place} on ${fmtEnDate(workDate)}.\n\nDuring the service, ${actText} were ${op === "done" ? "completed" : "carried out"}.\n\n${sections.map(([h, b], k) => `${k + 1}. ${h}\n${b}`).join("\n\n")}\n\nPlease find attached the signed MRO Service Report and Sensor Calibration Report for your reference.\n\nFor any future technical support or service attendance, please contact our Marine Service Team.\nFor spare inquiries or quotations, please contact our Spare Team.\n\n■ Contact Information\nA/S & Technical Support: Marine Service Team — [name / email]\nSpare: Spare Team — [name / email]\n\n■ Customer Satisfaction Survey\nTo help us improve our service quality, please kindly scan the QR code in the attached service report and share your feedback.`;
+  return { subject: mailSubject(TAGS.completion, x), body, warn: banned.length ? "피해야 할 표현이 있습니다: " + banned.join(", ") + " — 보내기 전에 고쳐 쓰세요." : "",
+    checklist: ["센서 교체 수량·스페어가 서비스 리포트와 일치하는지", "서명된 MRO Service Report·Sensor Calibration Report 첨부", "Contact Information의 [name / email] 채우기", "주관적 표현·규정 단정 문구가 없는지"] };
+}
+function buildBilling(x, i) {
+  const amount = num(i.invAmount), validPo = (i.validPo || "").trim() || x.po, fixed = i.mode !== "cost";
+  const tag = fixed ? TAGS.invoice : TAGS.invoiceCost, sc = i.sensorCharge || "none";
+  const sna = !i.sensorNotArrived ? "" : sc === "counterfeit" ? "As stated in the attached service report, non-genuine sensors were found installed onboard. Therefore, the cost of the new sensors is included in the invoice.\n\n" : sc === "missing" ? "As stated in the attached service report, no sensors were found installed onboard. Therefore, the cost of the new sensors is included in the invoice.\n\n" : "As the new calibrated sensors had not been delivered onboard at the time of attendance, the invoice covers the service labor and travel expenses only.\n\n";
+  const workDate = i.workDate ? parseYMD(i.workDate) : x.done, actual = parseActual(i.actualLines);
+  const men = num(i.travelMen) || 0, tdays = num(i.travelDays) || 0, rate = num(i.travelRate) || 0;
+  const travel = Math.round(men * tdays * rate * 100) / 100, extra = Math.round((travel + actual.total) * 100) / 100, total = Math.round(((amount || 0) + extra) * 100) / 100;
+  if (isNoPo(validPo)) return { error: "PO 미등록 — 인보이스 Hold. 유효 PO를 입력하세요 (Pre-proceeding 건은 선주 PO 등록 후 발행)." };
+  if (amount === null) return { error: "기본 공임 금액을 입력하세요." };
+  if (!workDate) return { error: "작업일을 입력하세요." };
+  if (!fixed && extra <= 0) return { error: "실비 발생 서비스: 추가 이동비 또는 실비 내역을 입력하세요." };
+  if (actual.bad.length) return { error: `실비 내역 형식 오류 ${actual.bad.length}줄 — "이름: 금액" 형식으로 한 줄에 하나.` };
+  const V = x.vessel, LINE = "===============================================", invNo = (i.invNo || "").trim() || "[invoice no.]", rma = i.rma ? `\n${RMA_CLAUSE}\n` : "";
+  const checklist = ["받는 사람 이름([name]) 채우기", "금액·인보이스 번호·PO(계약) 번호가 첨부 인보이스와 같은지"];
+  let body, note = "";
+  if (fixed) {
+    checklist.push("인보이스 1장 첨부");
+    body = `Dear [name],\n\nGood day.\n\nThe BWTS MRO service for ${V} was carried out on ${fmtEnDate(workDate)}.\n\nPlease find attached the invoice for your review and payment processing.\n\n${sna}${LINE}\n\n● VESSEL: ${V}\n\n● CONTRACT NO.: ${validPo}\n\n● BASIC BWTS MRO SERVICE: ${money(amount)}\n\n● TOTAL INVOICED AMOUNT: ${money(amount)}\n\n${LINE}\n\nAttachment:\n\n1) BWTS MRO Service Invoice\n   - Invoice No.: ${invNo}\n   - Amount: ${money(amount)}\n${rma}\nWe would appreciate it if you could review the attached invoice and confirm that the details are in order.\n\nKindly also advise the expected payment schedule at your earliest convenience.\n\nIf you have any questions or require any further supporting documents, please feel free to contact us without hesitation.\n\nYour kind attention and cooperation would be highly appreciated.`;
+  } else {
+    const today = new Date();
+    if (today.getDate() < INVOICE_FROM_DAY) note = `오늘은 ${today.getDate()}일 — 실비는 매월 ${INVOICE_FROM_DAY}일 이후 확정되므로, 확정된 뒤 보내세요.`;
+    checklist.push("인보이스 2장(기본 / 추가 이동비·실비)과 Cost Breakdown·영수증 첨부", "실비 금액이 영수증·Cost Breakdown과 같은지");
+    const parts = [], what = [];
+    parts.push(`● BASIC BWTS MRO SERVICE: ${money(amount)}`);
+    if (travel > 0) { parts.push(`● ADDITIONAL TRAVEL CHARGE: ${money(travel)}\n  (${men} engineer${men > 1 ? "s" : ""} × ${tdays} travel day${tdays > 1 ? "s" : ""} × ${money(rate)})`); what.push("additional travel charge"); }
+    if (actual.total > 0) { parts.push(`● ACTUAL EXPENSES: ${money(actual.total)}\n${actual.items.map(a => `  - ${a.name}: ${money(a.amount)}`).join("\n")}`); what.push("actual expenses"); }
+    parts.push(`● TOTAL INVOICED AMOUNT: ${money(total)}`);
+    const extraName = travel > 0 && actual.total > 0 ? "Additional Travel and Actual Cost Invoice" : travel > 0 ? "Additional Travel Charge Invoice" : "Actual Cost Invoice";
+    body = `Dear [name],\n\nGood day.\n\nThe BWTS MRO service for ${V} was carried out on ${fmtEnDate(workDate)}.\n\nPlease find attached the invoices and cost breakdown for your review, confirmation, and payment processing.\n\n${sna}${LINE}\n\n● VESSEL: ${V}\n\n● CONTRACT NO.: ${validPo}\n\n${parts.join("\n\n")}\n\n${LINE}\n\nAttachments:\n\n1) Basic BWTS MRO Service Invoice\n   - Invoice No.: ${invNo}\n   - Amount: ${money(amount)}\n\n2) ${extraName}\n   - Invoice No.: ${(i.invNo2 || "").trim() || "[invoice no.]"}\n   - Amount: ${money(extra)}\n\n3) Cost Breakdown and Supporting Receipts\n${rma}\nWe would appreciate it if you could review and confirm your acceptance of the ${what.join(" and ")} stated above.\n\nKindly also advise the expected payment schedule for the attached invoices at your earliest convenience.\n\nIf you have any questions or require further supporting documents, please feel free to contact us without hesitation.\n\nYour kind attention and cooperation would be highly appreciated.`;
+  }
+  if (i.sensorNotArrived && sc === "none") checklist.push("인보이스 금액에 센서값(자재비)을 넣지 않았는지 — 공임·출장비만");
+  else if (i.sensorNotArrived) checklist.push("서비스 리포트에 비정품·센서 없음 내용이 있고 첨부했는지", "센서값이 인보이스 금액에 들어갔는지");
+  return { subject: mailSubject(tag, Object.assign({}, x, { po: validPo })), body, note, checklist };
+}
+/* --- 입력폼 도우미 --- */
+function fieldRow(labelText, input, hint) { return el("label", { class: "field" }, el("span", { class: "fl", text: labelText }), hint ? el("span", { class: "hint", text: hint }) : null, input); }
+function numIn() { return el("input", { type: "number", min: "0", step: "1", class: "num-in" }); }
+function txtIn(v) { const n = el("input", { type: "text", class: "draft-subj" }); if (v) n.value = v; return n; }
+function areaIn() { return el("textarea", { class: "draft-body", style: "min-height:46px" }); }
+function chk(labelText) { const c = el("input", { type: "checkbox" }); return { c, row: el("label", { class: "check", style: "margin:var(--sp-xs) 0" }, c, " " + labelText) }; }
+function genBlock(title, makeInputs, build) {
+  const out = el("textarea", { class: "draft-body" }), subjOut = el("input", { type: "text", class: "draft-subj", readonly: "" }), msg = el("div", { class: "hint", "aria-live": "polite" });
+  const subjBtn = el("button", { type: "button", class: "btn", text: "제목 복사" }), copyBtn = el("button", { type: "button", class: "btn btn-primary", text: "본문 복사" });
+  subjBtn.disabled = copyBtn.disabled = true;
+  const gen = el("button", { type: "button", class: "btn btn-primary", text: title + " 초안 만들기" });
+  const read = makeInputs();
+  gen.addEventListener("click", () => {
+    const r = build(read.get());
+    if (r.error) { msg.textContent = "⚠ " + r.error; out.value = ""; subjOut.value = ""; subjBtn.disabled = copyBtn.disabled = true; return; }
+    subjOut.value = r.subject; out.value = r.body; subjBtn.disabled = copyBtn.disabled = false;
+    msg.textContent = (r.warn ? "⚠ " + r.warn + "\n" : r.note ? "ℹ " + r.note + "\n" : "") + "확인사항: " + r.checklist.join(" · ");
+  });
+  subjBtn.addEventListener("click", () => copyText(subjOut.value, subjBtn));
+  copyBtn.addEventListener("click", () => copyText(out.value, copyBtn));
+  return el("details", { class: "draft" }, el("summary", {}, title + " 만들기"), ...read.fields, gen, msg,
+    el("label", { class: "hint", text: "제목" }), subjOut, el("label", { class: "hint", text: "본문 (고친 뒤 복사)" }), out, el("div", { class: "live-row" }, subjBtn, copyBtn));
+}
+function completionPanel(x) {
+  return genBlock("📝 완료 보고", () => {
+    const wd = el("input", { type: "date" }); if (x.done) wd.value = fmtDate(x.done);
+    const nUvi = numIn(), nTemp = numIn(), nPress = numIn(), nFlow = numIn();
+    const sna = chk("신규 센서 미도착 (교체 안 함)"), crew = chk("선원 교육 실시"), oldT = chk("구품을 엔지니어가 회수");
+    const op = el("select", { class: "draft-subj" }, el("option", { value: "done", text: "완료" }), el("option", { value: "partial", text: "부분 완료" }), el("option", { value: "notdone", text: "미실시" }));
+    const opNote = areaIn(), dIssues = areaIn(), dReq = areaIn(), dRec = areaIn(), dCons = areaIn(), dRem = areaIn();
+    const counts = el("div", { class: "num-grid" }, el("label", { class: "fl2" }, "UV", nUvi), el("label", { class: "fl2" }, "온도", nTemp), el("label", { class: "fl2" }, "압력", nPress), el("label", { class: "fl2" }, "유량", nFlow));
+    return { fields: [fieldRow("작업일", wd, "비우면 관리대장 실적일"), el("div", { class: "fl", text: "센서 교체 수량 (EA)" }), counts, sna.row,
+        fieldRow("운전 시험", op), fieldRow("운전 시험 비고", opNote), crew.row, oldT.row,
+        fieldRow("특이사항 (한 줄에 하나)", dIssues), fieldRow("필요 스페어", dReq), fieldRow("권장 스페어", dRec), fieldRow("사용한 스페어", dCons), fieldRow("기타 비고", dRem)],
+      get: () => ({ workDate: wd.value, nUvi: nUvi.value, nTemp: nTemp.value, nPress: nPress.value, nFlow: nFlow.value, sensorNotArrived: sna.c.checked, opTest: op.value, opNote: opNote.value, crewTraining: crew.c.checked, oldTaken: oldT.c.checked, dIssues: dIssues.value, dRequired: dReq.value, dRecommended: dRec.value, dConsumed: dCons.value, dRemarks: dRem.value }) };
+  }, i => buildCompletion(x, i));
+}
+function billingPanel(x) {
+  return genBlock("🧾 인보이스", () => {
+    const mode = el("select", { class: "draft-subj" }, el("option", { value: "fixed", text: "정액 [INVOICE] (부산·싱가포르 등)" }), el("option", { value: "cost", text: "실비 [COST BREAKDOWN & INVOICE]" }));
+    mode.value = isFixedPort(x.port) ? "fixed" : "cost";
+    const amt = el("input", { type: "number", min: "0", step: "0.01", class: "draft-subj" }), po = txtIn(x.po || ""), wd = el("input", { type: "date" }); if (x.done) wd.value = fmtDate(x.done);
+    const invNo = txtIn(""), rma = chk("구품 반납 조건부 센서 공급(RMA 문구 넣기)"), sna = chk("신규 센서 미도착");
+    const sc = el("select", { class: "draft-subj" }, el("option", { value: "none", text: "센서값 미청구 (공임·출장비만)" }), el("option", { value: "counterfeit", text: "비정품 설치 — 센서값 청구" }), el("option", { value: "missing", text: "센서 없음 — 센서값 청구" }));
+    const tMen = numIn(), tDays = numIn(), tRate = el("input", { type: "number", min: "0", step: "0.01", class: "num-in" }), actual = areaIn(), invNo2 = txtIn("");
+    const travel = el("div", { class: "num-grid" }, el("label", { class: "fl2" }, "인원", tMen), el("label", { class: "fl2" }, "이동일", tDays), el("label", { class: "fl2" }, "일단가", tRate));
+    return { fields: [fieldRow("정산 방식", mode, "항구로 자동 추천 — 확인하세요"), fieldRow("기본 공임 금액 (USD)", amt), fieldRow("PO (계약) 번호", po), fieldRow("작업일", wd, "비우면 실적일"), fieldRow("인보이스 번호", invNo),
+        sna.row, fieldRow("센서 미도착 시 정산", sc), rma.row,
+        el("div", { class: "fl", text: "── 실비일 때만 ──" }), el("div", { class: "fl", text: "추가 이동비 (인원 × 이동일 × 일단가)" }), travel, fieldRow("실비 내역 (한 줄 \"이름: 금액\")", actual), fieldRow("추가 인보이스 번호", invNo2)],
+      get: () => ({ mode: mode.value, invAmount: amt.value, validPo: po.value, workDate: wd.value, invNo: invNo.value, rma: rma.c.checked, sensorNotArrived: sna.c.checked, sensorCharge: sc.value, travelMen: tMen.value, travelDays: tDays.value, travelRate: tRate.value, actualLines: actual.value, invNo2: invNo2.value }) };
+  }, i => buildBilling(x, i));
+}
+/* ===== 칸반 단계별 할 일 체크 (본 도구 v9와 같은 TASKS) — 이 PC 애드인 저장소에 기록 ===== */
+const TASK_STORE = "bwtsAddinTasks.v1";
+const TASKS = [
+  [{ id: "c1", t: "만료일 알림·장기 스케줄 요청 메일 발송" }, { id: "c2", t: "기항 계획(장기 스케줄) 받음" }],
+  [{ id: "s1", t: "기항지·일정 확정" }, { id: "s2", t: "대리점 엔지니어 가능 확인" }, { id: "s3", t: "선주 방선 확인 (또는 견적 승인)" }],
+  [{ id: "w1", t: "Work Order 발행", note: "메일 연동 예정: Job order 메일 수신 시 자동" },
+   { id: "w2", t: "센서 준비 완료", auto: x => isFilled(x.ready) }, { id: "w3", t: "센서 출고", auto: x => isFilled(x.shipped) },
+   { id: "w4", t: "방선 완료", auto: x => isFilled(x.doneRaw) }],
+  [{ id: "f1", t: "완료 보고 메일 발송", auto: x => x.paidOk },
+   { id: "f2", t: "인보이스 발행", auto: x => isFilled(x.invoice) },
+   { id: "f3", t: "수금완료", auto: x => x.paidOk },
+   { id: "f4", t: "구품 회수", auto: x => isReturned(x.returned), warn: x => (ledger && ledger.returnedCol && !x.returned) ? "관리대장 구품회수 칸이 비어 있음 — 확인 필요" : "" }],
+];
+let taskChecks = (() => { try { return JSON.parse(store.get(TASK_STORE) || "{}") || {}; } catch { return {}; } })();
+let taskSeq = 0;
+function taskPanel(x) {
+  const tl = TASKS[x.stage] || []; if (!tl.length) return null;
+  const k = x.vkey + "|" + (x.po || ""), det = el("details", { class: "tasks" });
+  const sumText = el("span", {}), prog = el("span", { class: "prog" }), bar = el("span", {}); prog.append(bar);
+  const update = () => { const n = det.querySelectorAll("input[type=checkbox]:checked").length; sumText.textContent = `✅ 할 일 ${n}/${tl.length} · ${LANES[x.stage]} `; bar.style.width = Math.round(n / tl.length * 100) + "%"; prog.className = "prog" + (n === tl.length ? " full" : ""); };
+  det.append(el("summary", {}, sumText, prog));
+  const chkk = taskChecks[k] || {};
+  for (const t of tl) {
+    const auto = t.auto ? !!t.auto(x) : false, done = auto || !!chkk[t.id], id = "tk-" + (taskSeq++);
+    const cb = el("input", { type: "checkbox", id, "data-task": t.id }); cb.checked = done; cb.disabled = auto;
+    cb.addEventListener("change", () => {
+      const o = taskChecks[k] || (taskChecks[k] = {});
+      if (cb.checked) o[t.id] = true; else delete o[t.id];
+      if (!Object.keys(o).length) delete taskChecks[k];
+      store.set(TASK_STORE, JSON.stringify(taskChecks));
+      update();
+    });
+    const warnText = t.warn && !done ? t.warn(x) : "";
+    det.append(el("div", { class: "check" }, cb, el("label", { for: id },
+      t.t + (auto ? " (관리대장)" : ""), t.note && !done ? el("span", { class: "hint", text: " " + t.note }) : null,
+      warnText ? el("span", { class: "hint" }, " ⚠ " + warnText) : null)));
+  }
+  update();
+  return det;
+}
 function renderHits(text) {
   const box = $("hits");
   if (!ledger || ledger.error) { box.replaceChildren(el("div", { class: "banner lv-warning" }, "관리대장을 먼저 불러오세요 (아래 설정 → 구글 시트 연결 또는 CSV).")); return; }
@@ -337,7 +639,9 @@ function renderHits(text) {
       el("div", { class: "row", text: `칸반 ${LANES[x.stage]}${x.finished ? " · 끝난 건" : ""}${x.attRaw ? ` · 승선 ${x.attRaw}` : ""}` }),
       el("div", { class: "row" }, dot(st.lv), `${st.t}${x.days === null ? "" : x.days <= 0 ? ` · ${-x.days}일 지남` : ` · 만료까지 ${x.days}일`}${x.expiry ? ` (${fmtDate(x.expiry)}, ${x.expSrc})` : ""}`),
       ...warns.map(([lv, t]) => el("div", { class: "row" }, dot(lv), t)),
-      (ledger.live && link ? schedulePanel(x) : null));
+      taskPanel(x),
+      (ledger.live && link ? schedulePanel(x) : null),
+      draftPanel(x), completionPanel(x), billingPanel(x));
   });
   box.replaceChildren(...[head, ...cards, hits.length > 6 ? el("div", { class: "muted", text: `외 ${hits.length - 6}건 더 맞음` }) : null].filter(Boolean));
 }
