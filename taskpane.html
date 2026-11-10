@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BWTS MRO Helper — Outlook</title>
+<!-- Outlook 애드인 API (Microsoft 제공). Outlook 밖에서 열면 "시험 입력" 칸으로 동작 -->
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<style>
+  /* 회사 디자인 표준(20_design-system.md) 값만 사용 */
+  :root {
+    --primary-700: #1C4F82; --primary-600: #2566A3; --primary-500: #2F7BC1; --primary-200: #BBD6F2; --primary-100: #E3F0FA;
+    --color-success: #22C55E; --color-warning: #F59E0B; --color-danger: #EF4444; --color-info: #3B82F6;
+    --gray-900: #111827; --gray-700: #374151; --gray-600: #4B5563; --gray-400: #9CA3AF; --gray-300: #D1D5DB; --gray-200: #E5E7EB; --gray-100: #F3F4F6; --gray-50: #F9FAFB;
+    --color-bg: #F9FAFB; --color-card: #FFFFFF;
+    --font: Pretendard, Inter, "Noto Sans KR", system-ui, sans-serif;
+    --fs-h2: 20px; --fs-h3: 18px; --fs-body-lg: 16px; --fs-body: 14px; --fs-caption: 12px;
+    --sp-xs: 4px; --sp-sm: 8px; --sp-md: 16px; --sp-lg: 24px;
+    --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-bg); color: var(--gray-900); font-family: var(--font); font-size: var(--fs-body); line-height: 1.5; }
+  header { background: var(--primary-700); color: var(--color-card); padding: var(--sp-sm) var(--sp-md); }
+  header h1 { margin: 0; font-size: var(--fs-body-lg); font-weight: 600; }
+  main { padding: var(--sp-sm); }
+  .card { background: var(--color-card); border: 1px solid var(--gray-200); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: var(--sp-md); margin-bottom: var(--sp-sm); }
+  h2 { font-size: var(--fs-body-lg); font-weight: 600; margin: 0 0 var(--sp-sm); }
+  .muted { color: var(--gray-600); font-size: var(--fs-caption); }
+  .field { margin-bottom: var(--sp-sm); }
+  .field label { display: block; font-weight: 600; margin-bottom: var(--sp-xs); }
+  .hint { display: block; font-weight: 400; color: var(--gray-600); font-size: var(--fs-caption); }
+  select, textarea { width: 100%; padding: var(--sp-sm); font: inherit; color: var(--gray-900); border: 1px solid var(--gray-300); border-radius: var(--radius-md); background: var(--color-card); }
+  textarea { min-height: 72px; resize: vertical; }
+  select:focus, textarea:focus { outline: none; border-color: var(--primary-500); box-shadow: 0 0 0 2px var(--primary-200); }
+  input[type=file] { font: inherit; max-width: 100%; }
+  input[type=file]:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+  .btn { font: inherit; font-weight: 600; border-radius: var(--radius-md); padding: var(--sp-xs) var(--sp-sm); cursor: pointer; border: 1px solid var(--gray-300); background: var(--color-card); color: var(--gray-900); }
+  .btn:hover { background: var(--primary-100); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: var(--radius-sm); margin-right: var(--sp-xs); vertical-align: middle; background: var(--lv); }
+  .lv-error { --lv: var(--color-danger); } .lv-warning { --lv: var(--color-warning); } .lv-info { --lv: var(--color-info); }
+  .lv-success { --lv: var(--color-success); } .lv-inactive { --lv: var(--gray-400); }
+  .banner { border: 1px solid var(--gray-200); border-left: 4px solid var(--lv); border-radius: var(--radius-md); padding: var(--sp-sm); margin-bottom: var(--sp-sm); background: var(--color-card); }
+  .hit { border: 1px solid var(--gray-200); border-left: 4px solid var(--lv); border-radius: var(--radius-md); padding: var(--sp-sm); margin-bottom: var(--sp-sm); }
+  .hit .name { font-weight: 600; font-size: var(--fs-body-lg); word-break: break-word; }
+  .hit .who { font-weight: 600; }
+  .row { font-size: var(--fs-caption); color: var(--gray-700); word-break: break-word; }
+  .state { padding: var(--sp-md) var(--sp-sm); text-align: center; color: var(--gray-600); }
+  details { margin-top: var(--sp-sm); }
+  summary { cursor: pointer; font-weight: 600; }
+</style>
+</head>
+<body>
+<header><h1>BWTS MRO Helper</h1></header>
+<main>
+  <section class="card" aria-labelledby="mail-title">
+    <h2 id="mail-title">이 메일</h2>
+    <div id="mailStatus" class="muted" aria-live="polite">메일을 읽는 중…</div>
+    <div id="hits" aria-live="polite"></div>
+    <div id="testBox" hidden>
+      <div class="field">
+        <label for="testText">시험 입력 (Outlook 밖에서 열었을 때)<span class="hint">메일 제목·본문을 붙여 넣으면 관리대장과 대조합니다</span></label>
+        <textarea id="testText"></textarea>
+      </div>
+      <button type="button" class="btn" id="testRun">대조하기</button>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="set-title">
+    <h2 id="set-title">설정</h2>
+    <div class="field">
+      <label for="manager">내 담당자 이름<span class="hint">내 건과 다른 담당자 건을 구분해 보여줍니다</span></label>
+      <select id="manager"><option value="">(관리대장을 먼저 불러오세요)</option></select>
+    </div>
+    <details id="ledBox">
+      <summary>관리대장 불러오기</summary>
+      <p class="muted">구글 시트에서 받은 CSV를 고르세요. 이 Outlook 창의 브라우저 저장소에만 보관되고 외부로 보내지 않습니다.</p>
+      <div class="field">
+        <label for="fileMain">올해 시트 CSV (예: 2026)</label>
+        <input id="fileMain" type="file" accept=".csv,text/csv" aria-describedby="ledStatus">
+      </div>
+      <div class="field">
+        <label for="fileRef">작년 시트 CSV (만료일 참고, 예: 2025)</label>
+        <input id="fileRef" type="file" accept=".csv,text/csv" aria-describedby="ledStatus">
+      </div>
+      <button type="button" class="btn" id="ledClear">저장된 관리대장 지우기</button>
+    </details>
+    <div id="ledStatus" class="muted" aria-live="polite"></div>
+  </section>
+  <p class="muted">메일 내용은 이 창 안에서만 대조하고 저장하거나 보내지 않습니다. 메일 자동 이동은 하지 않습니다 (Outlook 규칙 사용).</p>
+</main>
+<script>
+"use strict";
+/* ===== 공통 규칙 (BWTS_MRO_Helper.html v7과 같은 기준) ===== */
+const RULES = { expiryContactDays: 120, expiryScheduleDays: 90, expiryDecideDays: 60, returnAfterDays: 30 };
+const LANES = ["① 연락 시작", "② 스케줄 조율", "③ 서비스 진행", "④ 완료·정산"];
+const FIELDS = [
+  ["vessel", /vessel|호선|선박|선명|ship\s*name/i], ["expiry", /due|expir|만료|유효|교정/i], ["done", /실적/],
+  ["attend", /attend|승선|방선|서비스\s*일|service\s*date/i], ["port", /port|항구|기항|place|장소|지역/i], ["country", /country|국가/i],
+  ["po", /\bp\.?o\.?\b|발주/i], ["owner", /owner|선주|선사|client|고객/i], ["manager", /담당자|담당|manager|\bPIC\b/i],
+  ["remarks", /remark|비고/i], ["ready", /준비\s*완/], ["shipped", /출고/], ["paid", /수금/], ["returned", /구품/],
+];
+const STORE = { main: "bwtsAddinMain.v1", ref: "bwtsAddinRef.v1", manager: "bwtsAddinManager.v1" };
+const $ = id => document.getElementById(id);
+function el(tag, attrs, ...children) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) { if (k === "class") n.className = v; else if (k === "text") n.textContent = v; else n.setAttribute(k, v); }
+  for (const c of children) if (c != null) n.append(c);
+  return n;
+}
+const dot = lv => el("span", { class: "dot lv-" + lv, "aria-hidden": "true" });
+const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch { return false; } }, del: k => { try { localStorage.removeItem(k); } catch {} } };
+
+function parseCsv(text) {
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
+    else cell += c;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+function decodeText(buf) { try { return new TextDecoder("utf-8", { fatal: true }).decode(buf).replace(/^﻿/, ""); } catch { return new TextDecoder("euc-kr").decode(buf); } }
+function makeDate(y, m, d) { if (y < 100) y += 2000; const t = new Date(y, m - 1, d); return t.getFullYear() === y && t.getMonth() === m - 1 && t.getDate() === d ? t : null; }
+function parseLooseDate(raw, year) {
+  const s = String(raw || "").trim(); let m;
+  if (year && (m = /^(\d{1,2})\/(\d{1,2})$/.exec(s))) return makeDate(year, +m[1], +m[2]);
+  if ((m = /^(\d{4})[-./년 ]\s*(\d{1,2})[-./월 ]\s*(\d{1,2})일?$/.exec(s))) return makeDate(+m[1], +m[2], +m[3]);
+  return null;
+}
+function addOneYear(d) { const y = d.getFullYear() + 1, m = d.getMonth(), t = new Date(y, m, d.getDate()); return t.getMonth() === m ? t : new Date(y, m + 1, 0); }
+const day0 = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const daysBetween = (a, b) => Math.round((day0(b) - day0(a)) / 86400000);
+const fmtDate = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const cleanVessel = v => String(v || "").toUpperCase().replace(/^\s*M\s*[\/.]?\s*V\.?\s+/, "").trim();
+const normVessel = v => cleanVessel(v).replace(/[^A-Z0-9가-힣]/g, "");
+const isFilled = v => !!v && !/^(x|-|n\/?a|미.*)$/i.test(v);
+const isReturned = v => /^(v|x|o|완료|회수|회수\s*완료)$/i.test(v || "");
+const isNoPo = v => { const s = String(v || "").trim(); return !s || /^(tba|tbd|tbc|미정|미등록|없음|n\/?a|-)$/i.test(s); };
+const splitNames = v => String(v || "").split(/[,/]/).map(s => s.trim()).filter(Boolean);
+function stageOf(days) {
+  if (days === null) return { t: "만료일 확인 필요", lv: "inactive" };
+  if (days <= 0) return { t: "만료", lv: "error" };
+  if (days <= RULES.expiryDecideDays) return { t: "방향 잡기", lv: "warning" };
+  if (days <= RULES.expiryScheduleDays) return { t: "스케줄링", lv: "info" };
+  if (days <= RULES.expiryContactDays) return { t: "연락 시작", lv: "info" };
+  return { t: "아직 시기 아님", lv: "success" };
+}
+function analyse(text, fileName) {
+  const rows = parseCsv(text);
+  let header = 0, best = -1;
+  rows.slice(0, 100).forEach((r, i) => { const s = FIELDS.filter(([, re]) => r.some(c => re.test(c))).length * 100 + r.filter(c => c.trim()).length; if (s > best) { best = s; header = i; } });
+  const head = rows[header] || [], used = new Set(), map = {};
+  for (const [k, re] of FIELDS) { const i = head.findIndex((c, n) => !used.has(n) && re.test(c)); if (i >= 0) { map[k] = i; used.add(i); } }
+  for (let i = head.length - 1; i >= 0; i--) if (/비고|remark/i.test(head[i]) && !used.has(i)) { map.paidNote = i; break; }
+  let plusYear = false;
+  if (/승선\s*일자|교정/.test(head[17] || "")) { for (const k of Object.keys(map)) if (map[k] === 17) delete map[k]; map.expiry = 17; plusYear = true; }
+  const fy = /(?:^|\D)(20\d{2})(?:\D|$)/.exec(fileName || "");
+  return { rows: rows.slice(header + 1), map, plusYear, year: fy ? +fy[1] : new Date().getFullYear() };
+}
+let ledger = null; // { items, managers, mainName, refCount }
+function buildLedger() {
+  const mainText = store.get(STORE.main), refText = store.get(STORE.ref);
+  if (!mainText) { ledger = null; return; }
+  const main = JSON.parse(mainText), A = analyse(main.text, main.name);
+  if (A.map.vessel === undefined) { ledger = { error: "올해 시트에서 선명 열을 찾지 못했습니다." }; return; }
+  const get = (r, k) => A.map[k] === undefined ? "" : String(r[A.map[k]] ?? "").trim();
+  const refBy = new Map();
+  if (refText) {
+    const ref = JSON.parse(refText), R = analyse(ref.text, ref.name);
+    if (R.map.vessel !== undefined && R.map.expiry !== undefined) for (const r of R.rows) {
+      const v = normVessel(r[R.map.vessel]); let d = parseLooseDate(String(r[R.map.expiry] ?? "").trim(), R.year);
+      if (!v || !d) continue; if (R.plusYear) d = addOneYear(d);
+      if (!refBy.has(v) || refBy.get(v) < d) refBy.set(v, d);
+    }
+  }
+  const latestDone = new Map();
+  for (const r of A.rows) { const v = normVessel(get(r, "vessel")), d = parseLooseDate(get(r, "done"), A.year); if (v && d && (!latestDone.has(v) || latestDone.get(v) < d)) latestDone.set(v, d); }
+  const today = new Date(), items = [];
+  for (const r of A.rows) {
+    const vessel = get(r, "vessel"); if (!vessel) continue;
+    const vkey = normVessel(vessel), doneRaw = get(r, "done"), done = parseLooseDate(doneRaw, A.year);
+    let expiry = null, expSrc = "";
+    if (latestDone.has(vkey)) { expiry = addOneYear(latestDone.get(vkey)); expSrc = "올해 실적 + 1년"; }
+    else if (!isFilled(doneRaw)) {
+      const b = parseLooseDate(get(r, "expiry"), A.year);
+      if (b) { expiry = A.plusYear ? addOneYear(b) : b; expSrc = "관리대장"; } else if (refBy.has(vkey)) { expiry = refBy.get(vkey); expSrc = "작년 시트 + 1년"; }
+    }
+    const paidOk = A.map.paidNote !== undefined ? /수금\s*완료/.test(get(r, "paidNote")) : isFilled(get(r, "paid"));
+    const returned = get(r, "returned"), po = get(r, "po");
+    items.push({ vessel, vkey, words: cleanVessel(vessel).replace(/[^A-Z0-9가-힣]+/g, " ").trim(), po, poKey: isNoPo(po) ? "" : po.toUpperCase().replace(/[^A-Z0-9]+/g, ""),
+      owner: get(r, "owner"), manager: get(r, "manager"), port: get(r, "port"), country: get(r, "country"), attRaw: get(r, "attend"),
+      stage: isFilled(doneRaw) ? 3 : (isFilled(get(r, "shipped")) || isFilled(get(r, "ready"))) ? 2 : get(r, "attend") ? 1 : 0,
+      finished: paidOk && isReturned(returned), done, returned, expiry, expSrc, days: expiry ? daysBetween(today, expiry) : null });
+  }
+  const managers = [...new Set(items.flatMap(x => splitNames(x.manager)))].sort((a, b) => a.localeCompare(b, "ko"));
+  ledger = { items, managers, mainName: main.name, refCount: refBy.size, refName: refText ? JSON.parse(refText).name : "" };
+}
+function renderSettings() {
+  const sel = $("manager"), saved = store.get(STORE.manager) || "";
+  if (!ledger || ledger.error) {
+    sel.replaceChildren(el("option", { value: "", text: "(관리대장을 먼저 불러오세요)" }));
+    $("ledStatus").textContent = ledger && ledger.error ? ledger.error : "관리대장이 없습니다. 아래 \"관리대장 불러오기\"에서 CSV를 고르세요.";
+    $("ledBox").open = true; return;
+  }
+  sel.replaceChildren(el("option", { value: "", text: "(고르지 않음)" }), ...ledger.managers.map(n => el("option", { value: n, text: n })));
+  sel.value = ledger.managers.includes(saved) ? saved : "";
+  $("ledStatus").textContent = `관리대장: ${ledger.mainName} (${ledger.items.length}건)${ledger.refName ? ` · 작년 시트 ${ledger.refName} (${ledger.refCount}척)` : " · 작년 시트 없음 — 일부 만료일을 모를 수 있음"}`;
+}
+/* ===== 메일과 관리대장 대조 ===== */
+function matchMail(text) {
+  const up = " " + String(text || "").toUpperCase().replace(/[^A-Z0-9가-힣]+/g, " ").trim() + " ";
+  const compact = up.replace(/\s+/g, "");
+  const hits = ledger.items.filter(x => (x.words.length >= 4 && up.includes(" " + x.words + " ")) || (x.poKey.length >= 5 && compact.includes(x.poKey)));
+  // 같은 배는 진행 중인 행을 앞에, 끝난 행은 뒤에
+  return hits.sort((a, b) => (a.finished - b.finished) || ((a.days ?? 1e9) - (b.days ?? 1e9)));
+}
+function renderHits(text) {
+  const box = $("hits");
+  if (!ledger || ledger.error) { box.replaceChildren(el("div", { class: "banner lv-warning" }, "관리대장을 먼저 불러오세요 (아래 설정).")); return; }
+  const me = $("manager").value, hits = matchMail(text);
+  if (!hits.length) { box.replaceChildren(el("div", { class: "state", text: "관리대장과 맞는 선박명·PO가 이 메일에 없습니다." })); return; }
+  const mine = me && hits.some(x => splitNames(x.manager).includes(me));
+  const head = me ? el("div", { class: "banner " + (mine ? "lv-success" : "lv-inactive") }, el("strong", { text: mine ? `내 건 (${me})` : "다른 담당자 건" }), mine ? "" : ` — 담당: ${[...new Set(hits.map(x => x.manager || "미지정"))].join(", ")}`) : null;
+  const cards = hits.slice(0, 6).map(x => {
+    const st = stageOf(x.days), isMine = me && splitNames(x.manager).includes(me);
+    const warns = [];
+    if (isNoPo(x.po)) warns.push(["warning", "PO 미등록 — 인보이스 Hold"]);
+    if (x.done && !isReturned(x.returned)) { const n = daysBetween(x.done, new Date()); if (n >= RULES.returnAfterDays) warns.push(["error", `구품 미반납 D+${n}`]); }
+    return el("div", { class: "hit lv-" + (isMine ? "success" : "inactive") },
+      el("div", { class: "name", text: x.vessel }),
+      el("div", { class: "who", text: `담당: ${x.manager || "미지정"}${isMine ? " (나)" : ""}` }),
+      el("div", { class: "row", text: [x.owner, x.po ? "PO " + x.po : "", [x.port, x.country].filter(Boolean).join(" / ")].filter(Boolean).join(" · ") }),
+      el("div", { class: "row", text: `칸반 ${LANES[x.stage]}${x.finished ? " · 끝난 건" : ""}${x.attRaw ? ` · 승선 ${x.attRaw}` : ""}` }),
+      el("div", { class: "row" }, dot(st.lv), `${st.t}${x.days === null ? "" : x.days <= 0 ? ` · ${-x.days}일 지남` : ` · 만료까지 ${x.days}일`}${x.expiry ? ` (${fmtDate(x.expiry)}, ${x.expSrc})` : ""}`),
+      ...warns.map(([lv, t]) => el("div", { class: "row" }, dot(lv), t)));
+  });
+  box.replaceChildren(...[head, ...cards, hits.length > 6 ? el("div", { class: "muted", text: `외 ${hits.length - 6}건 더 맞음` }) : null].filter(Boolean));
+}
+/* ===== 메일 읽기 (Outlook) / 시험 입력 (Outlook 밖) ===== */
+let lastText = "";
+function readCurrentMail() {
+  const item = Office.context.mailbox && Office.context.mailbox.item;
+  if (!item) { $("mailStatus").textContent = "메일을 선택하세요."; $("hits").replaceChildren(); return; }
+  const subject = item.subject || "";
+  $("mailStatus").textContent = "제목: " + subject;
+  item.body.getAsync(Office.CoercionType.Text, res => {
+    lastText = subject + "\n" + (res.status === Office.AsyncResultStatus.Succeeded ? res.value : "");
+    if (res.status !== Office.AsyncResultStatus.Succeeded) $("mailStatus").textContent += " (본문을 읽지 못해 제목만 대조)";
+    renderHits(lastText);
+  });
+}
+async function loadFile(input, key) {
+  const f = input.files[0]; if (!f) return;
+  if (!/\.csv$/i.test(f.name) || f.size > 5 * 1024 * 1024) { $("ledStatus").textContent = "5MB 이하 CSV 파일만 불러올 수 있습니다."; input.value = ""; return; }
+  const buf = new Uint8Array(await f.arrayBuffer());
+  if (buf.subarray(0, 4096).includes(0)) { $("ledStatus").textContent = "텍스트 CSV 파일이 아닙니다."; input.value = ""; return; }
+  if (!store.set(key, JSON.stringify({ name: f.name, text: decodeText(buf) }))) { $("ledStatus").textContent = "이 창의 저장소에 보관하지 못했습니다 (저장소 차단 또는 용량 초과)."; return; }
+  buildLedger(); renderSettings(); renderHits(lastText);
+}
+$("fileMain").addEventListener("change", () => loadFile($("fileMain"), STORE.main));
+$("fileRef").addEventListener("change", () => loadFile($("fileRef"), STORE.ref));
+$("ledClear").addEventListener("click", () => { store.del(STORE.main); store.del(STORE.ref); buildLedger(); renderSettings(); renderHits(lastText); });
+$("manager").addEventListener("change", () => { store.set(STORE.manager, $("manager").value); renderHits(lastText); });
+$("testRun").addEventListener("click", () => { lastText = $("testText").value; renderHits(lastText); });
+
+let started = false;
+function start(inOutlook) {
+  if (started) return; started = true;
+  try { buildLedger(); } catch { ledger = { error: "저장된 관리대장을 읽지 못했습니다. 다시 불러오세요." }; }
+  renderSettings();
+  if (inOutlook) {
+    readCurrentMail();
+    // 창을 고정한 경우 메일을 바꿀 때마다 다시 대조 (지원하는 Outlook에서만)
+    try { Office.context.mailbox.addHandlerAsync(Office.EventType.ItemChanged, readCurrentMail); } catch {}
+  } else {
+    $("mailStatus").textContent = "Outlook 밖에서 열렸습니다 — 아래 시험 입력 칸을 쓰세요.";
+    $("testBox").hidden = false;
+  }
+}
+if (window.Office && Office.onReady) Office.onReady(info => start(!!info && info.host === Office.HostType.Outlook));
+// Outlook API가 응답하지 않으면(인터넷 차단·Outlook 밖) 5초 뒤 시험 입력 모드로
+setTimeout(() => start(false), 5000);
+</script>
+</body>
+</html>
