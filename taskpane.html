@@ -60,10 +60,16 @@
   .mailitem .subj { font-weight: 600; word-break: break-word; }
   .mailitem .meta { font-size: var(--fs-caption); color: var(--gray-600); word-break: break-word; }
   .mailitem .tag { font-size: var(--fs-caption); margin-top: var(--sp-xs); }
+  input[type=date] { width: 100%; padding: var(--sp-sm); font: inherit; color: var(--gray-900); border: 1px solid var(--gray-300); border-radius: var(--radius-md); background: var(--color-card); }
+  input[type=date]:focus { outline: none; border-color: var(--primary-500); box-shadow: 0 0 0 2px var(--primary-200); }
+  .sched { margin-top: var(--sp-sm); border-top: 1px solid var(--gray-200); padding-top: var(--sp-sm); }
+  .sched summary { font-size: var(--fs-caption); color: var(--primary-700); }
+  .sched .field { margin-bottom: var(--sp-xs); }
+  .sched label { font-size: var(--fs-caption); margin-bottom: var(--sp-xs); }
 </style>
 </head>
 <body>
-<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-10c</span></h1></header>
+<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-10d</span></h1></header>
 <main>
   <section class="card" aria-labelledby="mail-title">
     <h2 id="mail-title">이 메일</h2>
@@ -142,7 +148,7 @@ const FIELDS = [
   ["vessel", /vessel|호선|선박|선명|ship\s*name/i], ["expiry", /due|expir|만료|유효|교정/i], ["done", /실적/],
   ["attend", /attend|승선|방선|서비스\s*일|service\s*date/i], ["port", /port|항구|기항|place|장소|지역/i], ["country", /country|국가/i],
   ["po", /\bp\.?o\.?\b|발주/i], ["owner", /owner|선주|선사|client|고객/i], ["manager", /담당자|담당|manager|\bPIC\b/i],
-  ["remarks", /remark|비고/i], ["ready", /준비\s*완/], ["shipped", /출고/], ["paid", /수금/], ["returned", /구품/],
+  ["remarks", /remark|비고/i], ["ready", /준비\s*완/], ["shipped", /출고/], ["paid", /수금/], ["returned", /구품/], ["prepDue", /준비\s*기한/],
 ];
 const STORE = { main: "bwtsAddinMain.v1", ref: "bwtsAddinRef.v1", manager: "bwtsAddinManager.v1", link: "bwtsAddinLink.v1", liveAt: "bwtsAddinLiveAt.v1" };
 const LIVE_SHEETS = { main: "2026", ref: "2025" }, LIVE_MAX_AGE = 5 * 60 * 1000; // 5분 지난 관리대장이면 창을 열 때 새로 읽음
@@ -206,7 +212,7 @@ function analyse(src) {
   let plusYear = false;
   if (/승선\s*일자|교정/.test(head[17] || "")) { for (const k of Object.keys(map)) if (map[k] === 17) delete map[k]; map.expiry = 17; plusYear = true; }
   const fy = /(?:^|\D)(20\d{2})(?:\D|$)/.exec(fileName || "");
-  return { rows: rows.slice(header + 1), map, plusYear, year: fy ? +fy[1] : new Date().getFullYear() };
+  return { rows: rows.slice(header + 1), header, map, plusYear, year: fy ? +fy[1] : new Date().getFullYear() };
 }
 let ledger = null; // { items, managers, mainName, refCount }
 function buildLedger() {
@@ -227,8 +233,8 @@ function buildLedger() {
   const latestDone = new Map();
   for (const r of A.rows) { const v = normVessel(get(r, "vessel")), d = parseLooseDate(get(r, "done"), A.year); if (v && d && (!latestDone.has(v) || latestDone.get(v) < d)) latestDone.set(v, d); }
   const today = new Date(), items = [];
-  for (const r of A.rows) {
-    const vessel = get(r, "vessel"); if (!vessel) continue;
+  A.rows.forEach((r, j) => {
+    const vessel = get(r, "vessel"); if (!vessel) return;
     const vkey = normVessel(vessel), doneRaw = get(r, "done"), done = parseLooseDate(doneRaw, A.year);
     let expiry = null, expSrc = "";
     if (latestDone.has(vkey)) { expiry = addOneYear(latestDone.get(vkey)); expSrc = "올해 실적 + 1년"; }
@@ -240,11 +246,12 @@ function buildLedger() {
     const returned = get(r, "returned"), po = get(r, "po");
     items.push({ vessel, vkey, words: cleanVessel(vessel).replace(/[^A-Z0-9가-힣]+/g, " ").trim(), po, poKey: isNoPo(po) ? "" : po.toUpperCase().replace(/[^A-Z0-9]+/g, ""),
       owner: get(r, "owner"), manager: get(r, "manager"), port: get(r, "port"), country: get(r, "country"), attRaw: get(r, "attend"),
+      rowNo: A.header + j + 2, prepDue: get(r, "prepDue"),
       stage: isFilled(doneRaw) ? 3 : (isFilled(get(r, "shipped")) || isFilled(get(r, "ready"))) ? 2 : get(r, "attend") ? 1 : 0,
       finished: paidOk && isReturned(returned), done, returned, expiry, expSrc, days: expiry ? daysBetween(today, expiry) : null });
-  }
+  });
   const managers = [...new Set(items.flatMap(x => splitNames(x.manager)))].sort((a, b) => a.localeCompare(b, "ko"));
-  ledger = { items, managers, mainName: main.name, refCount: refBy.size, refName: refText ? JSON.parse(refText).name : "" };
+  ledger = { items, managers, mainName: main.name, refCount: refBy.size, refName: refText ? JSON.parse(refText).name : "", live: Array.isArray(main.rows) };
 }
 function renderSettings() {
   const sel = $("manager"), saved = store.get(STORE.manager) || "";
@@ -265,6 +272,49 @@ function matchMail(text) {
   // 같은 배는 진행 중인 행을 앞에, 끝난 행은 뒤에
   return hits.sort((a, b) => (a.finished - b.finished) || ((a.days ?? 1e9) - (b.days ?? 1e9)));
 }
+/* ===== 기항지 일정 확정 → 관리대장 반영 (C~V 노란색 + S열) — 본 도구 v9와 같은 confirmSchedule 통로 ===== */
+const SHIP_TYPES = ["해외배송", "국내배송", "핸드캐리"];
+const schedDraft = {}; let schedSeq = 0;
+function prepValue(dateStr, ship) { const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(dateStr || ""); return m && ship ? `${+m[2]}/${+m[3]} ${ship}` : ""; }
+function schedulePanel(x) {
+  const k = x.vkey + "|" + (x.po || ""), dr = schedDraft[k] || (schedDraft[k] = { date: "", ship: "" }), id = "sc" + (schedSeq++);
+  const date = el("input", { type: "date", id: id + "d" }); date.value = dr.date;
+  const ship = el("select", { id: id + "s" }, el("option", { value: "", text: "(고르세요)" }), ...SHIP_TYPES.map(s => el("option", { value: s, text: s }))); ship.value = dr.ship;
+  const preview = el("div", { class: "hint" }), msg = el("div", { class: "hint", "aria-live": "polite" });
+  const btn = el("button", { type: "button", class: "btn btn-primary", text: "관리대장에 반영" });
+  const canWrite = !!(ledger && ledger.live && link);
+  const upd = () => {
+    dr.date = date.value; dr.ship = ship.value;
+    const v = prepValue(dr.date, dr.ship);
+    preview.textContent = v ? `S열에 들어갈 값: ${x.prepDue && !x.prepDue.startsWith(v) ? `${v} [${x.prepDue}]` : v}${x.prepDue ? ` (지금 값: ${x.prepDue})` : ""}` : "날짜와 배송 방식을 고르면 S열에 들어갈 값이 보입니다.";
+    btn.disabled = !v || !canWrite;
+  };
+  date.addEventListener("input", upd); ship.addEventListener("change", upd); upd();
+  if (!canWrite) msg.textContent = "구글 시트에 실시간 연결돼 있어야 반영됩니다 (설정 → 구글 시트 연결).";
+  btn.addEventListener("click", async () => {
+    const v = prepValue(dr.date, dr.ship); if (!v || !link) return;
+    btn.disabled = true; msg.textContent = "관리대장에 반영하는 중…";
+    try {
+      const res = await fetch(link.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ token: link.token, action: "confirmSchedule", sheet: LIVE_SHEETS.main, row: x.rowNo, vessel: x.vessel, po: x.po, value: v }) });
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error("응답을 읽지 못했습니다. Apps Script를 새 코드로 다시 배포했는지 확인하세요.");
+      if (!data.ok) throw new Error(data.error === "unauthorized" ? "토큰이 맞지 않습니다." : String(data.error || "알 수 없는 오류").slice(0, 200));
+      if (data.row === undefined || data.value === undefined) throw new Error("Apps Script가 아직 예전 코드(읽기만)입니다. 새 Code.gs로 바꿔 다시 배포하세요.");
+      msg.textContent = `✓ 반영됨 — ${data.row}행, S열 "${data.value}"`;
+      delete schedDraft[k];
+      await liveFetch("confirm");
+    } catch (err) {
+      msg.textContent = (err instanceof TypeError ? "구글에 연결하지 못했습니다. 인터넷·회사망을 확인하세요." : err.message) + " — 시트는 바뀌지 않았습니다.";
+      btn.disabled = false;
+    }
+  });
+  return el("details", { class: "sched" },
+    el("summary", {}, "📅 일정 확정 반영 (C~V 노란색 + S열)"),
+    el("div", { class: "field" }, el("label", { for: id + "d", text: "센서 준비완료 필요 날짜" }), date),
+    el("div", { class: "field" }, el("label", { for: id + "s", text: "배송 방식" }), ship),
+    preview, btn, msg);
+}
 function renderHits(text) {
   const box = $("hits");
   if (!ledger || ledger.error) { box.replaceChildren(el("div", { class: "banner lv-warning" }, "관리대장을 먼저 불러오세요 (아래 설정 → 구글 시트 연결 또는 CSV).")); return; }
@@ -283,7 +333,8 @@ function renderHits(text) {
       el("div", { class: "row", text: [x.owner, x.po ? "PO " + x.po : "", [x.port, x.country].filter(Boolean).join(" / ")].filter(Boolean).join(" · ") }),
       el("div", { class: "row", text: `칸반 ${LANES[x.stage]}${x.finished ? " · 끝난 건" : ""}${x.attRaw ? ` · 승선 ${x.attRaw}` : ""}` }),
       el("div", { class: "row" }, dot(st.lv), `${st.t}${x.days === null ? "" : x.days <= 0 ? ` · ${-x.days}일 지남` : ` · 만료까지 ${x.days}일`}${x.expiry ? ` (${fmtDate(x.expiry)}, ${x.expSrc})` : ""}`),
-      ...warns.map(([lv, t]) => el("div", { class: "row" }, dot(lv), t)));
+      ...warns.map(([lv, t]) => el("div", { class: "row" }, dot(lv), t)),
+      (ledger.live && link ? schedulePanel(x) : null));
   });
   box.replaceChildren(...[head, ...cards, hits.length > 6 ? el("div", { class: "muted", text: `외 ${hits.length - 6}건 더 맞음` }) : null].filter(Boolean));
 }
