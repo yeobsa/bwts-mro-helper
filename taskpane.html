@@ -87,7 +87,7 @@
 </style>
 </head>
 <body>
-<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-10i</span></h1></header>
+<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-10k</span></h1></header>
 <main>
   <section class="card" aria-labelledby="mail-title">
     <h2 id="mail-title">이 메일</h2>
@@ -241,6 +241,7 @@ function buildLedger() {
   if (!mainText) { ledger = null; return; }
   const main = JSON.parse(mainText), A = analyse(main);
   if (A.map.vessel === undefined) { ledger = { error: "올해 시트에서 선명 열을 찾지 못했습니다." }; return; }
+  const doneSet = new Set(Array.isArray(main.doneRows) ? main.doneRows : []); // 시트 D열 빨강 = 완료 보고 발송
   const get = (r, k) => A.map[k] === undefined ? "" : String(r[A.map[k]] ?? "").trim();
   const refBy = new Map();
   if (refText) {
@@ -267,7 +268,7 @@ function buildLedger() {
     const returned = get(r, "returned"), po = get(r, "po");
     items.push({ vessel, vkey, words: cleanVessel(vessel).replace(/[^A-Z0-9가-힣]+/g, " ").trim(), po, poKey: poKeyOf(po),
       owner: get(r, "owner"), manager: get(r, "manager"), port: get(r, "port"), country: get(r, "country"), attRaw: get(r, "attend"),
-      rowNo: A.header + j + 2, prepDue: get(r, "prepDue"),
+      rowNo: A.header + j + 2, prepDue: get(r, "prepDue"), doneMailed: doneSet.has(A.header + j + 2),
       ready: get(r, "ready"), shipped: get(r, "shipped"), doneRaw, paidOk, invoice: get(r, "invoice"),
       stage: isFilled(doneRaw) ? 3 : (isFilled(get(r, "shipped")) || isFilled(get(r, "ready"))) ? 2 : get(r, "attend") ? 1 : 0,
       finished: paidOk && isReturned(returned), done, returned, expiry, expSrc, days: expiry ? daysBetween(today, expiry) : null });
@@ -336,6 +337,17 @@ function schedulePanel(x) {
     el("div", { class: "field" }, el("label", { for: id + "d", text: "센서 준비완료 필요 날짜" }), date),
     el("div", { class: "field" }, el("label", { for: id + "s", text: "배송 방식" }), ship),
     preview, btn, msg);
+}
+// 완료 보고 메일 발송 표식 → 시트 D열 빨강 (체크 해제 시 되돌림) — markDone 통로
+async function markDone(x, done) {
+  if (!link) throw new Error("연결 없음");
+  const res = await fetch(link.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ token: link.token, action: "markDone", sheet: LIVE_SHEETS.main, row: x.rowNo, vessel: x.vessel, po: x.po, done: done }) });
+  const data = await res.json().catch(() => null);
+  if (!data) throw new Error("응답을 읽지 못함 — Apps Script를 새 코드로 재배포했는지 확인하세요");
+  if (!data.ok) throw new Error(data.error === "unauthorized" ? "토큰이 맞지 않습니다" : String(data.error || "오류").slice(0, 150));
+  if (data.done === undefined) throw new Error("Apps Script가 아직 예전 코드입니다 — 새 Code.gs로 바꿔 재배포하세요");
+  return data;
 }
 /* ===== 메일 초안 (본 도구 v9 템플릿 그대로) — 관리대장만으로 자동 생성되는 2종 =====
    장기 스케줄 요청(만료 120일 이내) · 구품 반납 독촉(방선 D+30 미반납).
@@ -496,8 +508,8 @@ function buildCompletion(x, i) {
 }
 function buildBilling(x, i) {
   const amount = num(i.invAmount), validPo = (i.validPo || "").trim() || x.po, fixed = i.mode !== "cost";
-  const tag = fixed ? TAGS.invoice : TAGS.invoiceCost, sc = i.sensorCharge || "none";
-  const sna = !i.sensorNotArrived ? "" : sc === "counterfeit" ? "As stated in the attached service report, non-genuine sensors were found installed onboard. Therefore, the cost of the new sensors is included in the invoice.\n\n" : sc === "missing" ? "As stated in the attached service report, no sensors were found installed onboard. Therefore, the cost of the new sensors is included in the invoice.\n\n" : "As the new calibrated sensors had not been delivered onboard at the time of attendance, the invoice covers the service labor and travel expenses only.\n\n";
+  const tag = fixed ? TAGS.invoice : TAGS.invoiceCost;
+  const sna = ""; // 인보이스에는 센서 미도착 문구 넣지 않음 (사용자 결정 2026-11-10) — 완료 보고에만 표시
   const workDate = i.workDate ? parseYMD(i.workDate) : x.done, actual = parseActual(i.actualLines);
   const men = num(i.travelMen) || 0, tdays = num(i.travelDays) || 0, rate = num(i.travelRate) || 0;
   const travel = Math.round(men * tdays * rate * 100) / 100, extra = Math.round((travel + actual.total) * 100) / 100, total = Math.round(((amount || 0) + extra) * 100) / 100;
@@ -524,8 +536,6 @@ function buildBilling(x, i) {
     const extraName = travel > 0 && actual.total > 0 ? "Additional Travel and Actual Cost Invoice" : travel > 0 ? "Additional Travel Charge Invoice" : "Actual Cost Invoice";
     body = `Dear [name],\n\nGood day.\n\nThe BWTS MRO service for ${V} was carried out on ${fmtEnDate(workDate)}.\n\nPlease find attached the invoices and cost breakdown for your review, confirmation, and payment processing.\n\n${sna}${LINE}\n\n● VESSEL: ${V}\n\n● CONTRACT NO.: ${validPo}\n\n${parts.join("\n\n")}\n\n${LINE}\n\nAttachments:\n\n1) Basic BWTS MRO Service Invoice\n   - Invoice No.: ${invNo}\n   - Amount: ${money(amount)}\n\n2) ${extraName}\n   - Invoice No.: ${(i.invNo2 || "").trim() || "[invoice no.]"}\n   - Amount: ${money(extra)}\n\n3) Cost Breakdown and Supporting Receipts\n${rma}\nWe would appreciate it if you could review and confirm your acceptance of the ${what.join(" and ")} stated above.\n\nKindly also advise the expected payment schedule for the attached invoices at your earliest convenience.\n\nIf you have any questions or require further supporting documents, please feel free to contact us without hesitation.\n\nYour kind attention and cooperation would be highly appreciated.`;
   }
-  if (i.sensorNotArrived && sc === "none") checklist.push("인보이스 금액에 센서값(자재비)을 넣지 않았는지 — 공임·출장비만");
-  else if (i.sensorNotArrived) checklist.push("서비스 리포트에 비정품·센서 없음 내용이 있고 첨부했는지", "센서값이 인보이스 금액에 들어갔는지");
   return { subject: mailSubject(tag, Object.assign({}, x, { po: validPo })), body, note, checklist };
 }
 /* --- 입력폼 도우미 --- */
@@ -570,14 +580,13 @@ function billingPanel(x) {
     const mode = el("select", { class: "draft-subj" }, el("option", { value: "fixed", text: "정액 [INVOICE] (부산·싱가포르 등)" }), el("option", { value: "cost", text: "실비 [COST BREAKDOWN & INVOICE]" }));
     mode.value = isFixedPort(x.port) ? "fixed" : "cost";
     const amt = el("input", { type: "number", min: "0", step: "0.01", class: "draft-subj" }), po = txtIn(x.po || ""), wd = el("input", { type: "date" }); if (x.done) wd.value = fmtDate(x.done);
-    const invNo = txtIn(""), rma = chk("구품 반납 조건부 센서 공급(RMA 문구 넣기)"), sna = chk("신규 센서 미도착");
-    const sc = el("select", { class: "draft-subj" }, el("option", { value: "none", text: "센서값 미청구 (공임·출장비만)" }), el("option", { value: "counterfeit", text: "비정품 설치 — 센서값 청구" }), el("option", { value: "missing", text: "센서 없음 — 센서값 청구" }));
+    const invNo = txtIn(""), rma = chk("구품 반납 조건부 센서 공급(RMA 문구 넣기)");
     const tMen = numIn(), tDays = numIn(), tRate = el("input", { type: "number", min: "0", step: "0.01", class: "num-in" }), actual = areaIn(), invNo2 = txtIn("");
     const travel = el("div", { class: "num-grid" }, el("label", { class: "fl2" }, "인원", tMen), el("label", { class: "fl2" }, "이동일", tDays), el("label", { class: "fl2" }, "일단가", tRate));
     return { fields: [fieldRow("정산 방식", mode, "항구로 자동 추천 — 확인하세요"), fieldRow("기본 공임 금액 (USD)", amt), fieldRow("PO (계약) 번호", po), fieldRow("작업일", wd, "비우면 실적일"), fieldRow("인보이스 번호", invNo),
-        sna.row, fieldRow("센서 미도착 시 정산", sc), rma.row,
+        rma.row,
         el("div", { class: "fl", text: "── 실비일 때만 ──" }), el("div", { class: "fl", text: "추가 이동비 (인원 × 이동일 × 일단가)" }), travel, fieldRow("실비 내역 (한 줄 \"이름: 금액\")", actual), fieldRow("추가 인보이스 번호", invNo2)],
-      get: () => ({ mode: mode.value, invAmount: amt.value, validPo: po.value, workDate: wd.value, invNo: invNo.value, rma: rma.c.checked, sensorNotArrived: sna.c.checked, sensorCharge: sc.value, travelMen: tMen.value, travelDays: tDays.value, travelRate: tRate.value, actualLines: actual.value, invNo2: invNo2.value }) };
+      get: () => ({ mode: mode.value, invAmount: amt.value, validPo: po.value, workDate: wd.value, invNo: invNo.value, rma: rma.c.checked, travelMen: tMen.value, travelDays: tDays.value, travelRate: tRate.value, actualLines: actual.value, invNo2: invNo2.value }) };
   }, i => buildBilling(x, i));
 }
 /* ===== 칸반 단계별 할 일 체크 (본 도구 v9와 같은 TASKS) — 이 PC 애드인 저장소에 기록 ===== */
@@ -603,18 +612,31 @@ function taskPanel(x) {
   det.append(el("summary", {}, sumText, prog));
   const chkk = taskChecks[k] || {};
   for (const t of tl) {
-    const auto = t.auto ? !!t.auto(x) : false, done = auto || !!chkk[t.id], id = "tk-" + (taskSeq++);
-    const cb = el("input", { type: "checkbox", id, "data-task": t.id }); cb.checked = done; cb.disabled = auto;
-    cb.addEventListener("change", () => {
-      const o = taskChecks[k] || (taskChecks[k] = {});
-      if (cb.checked) o[t.id] = true; else delete o[t.id];
-      if (!Object.keys(o).length) delete taskChecks[k];
-      store.set(TASK_STORE, JSON.stringify(taskChecks));
-      update();
-    });
+    // f1(완료 보고 메일 발송): 실시간 연결 + 수금완료 아님 → 시트 D열 빨강으로 동기화 (체크하면 칠하고, 풀면 되돌림)
+    const liveF1 = t.id === "f1" && !!(ledger && ledger.live && link) && !x.paidOk;
+    const auto = t.auto ? !!t.auto(x) : false;
+    const done = liveF1 ? !!x.doneMailed : (auto || !!chkk[t.id]);
+    const id = "tk-" + (taskSeq++);
+    const cb = el("input", { type: "checkbox", id, "data-task": t.id }); cb.checked = done; cb.disabled = auto && !liveF1;
+    if (liveF1) {
+      cb.addEventListener("change", async () => {
+        const want = cb.checked; cb.disabled = true;
+        try { await markDone(x, want); x.doneMailed = want; }
+        catch (err) { cb.checked = !want; alert("시트 반영 실패: " + (err.message || err) + "\n시트는 바뀌지 않았습니다."); }
+        cb.disabled = false; update();
+      });
+    } else {
+      cb.addEventListener("change", () => {
+        const o = taskChecks[k] || (taskChecks[k] = {});
+        if (cb.checked) o[t.id] = true; else delete o[t.id];
+        if (!Object.keys(o).length) delete taskChecks[k];
+        store.set(TASK_STORE, JSON.stringify(taskChecks));
+        update();
+      });
+    }
     const warnText = t.warn && !done ? t.warn(x) : "";
     det.append(el("div", { class: "check" }, cb, el("label", { for: id },
-      t.t + (auto ? " (관리대장)" : ""), t.note && !done ? el("span", { class: "hint", text: " " + t.note }) : null,
+      t.t + (auto ? " (관리대장)" : liveF1 ? " (시트 D열 빨강 동기화)" : ""), t.note && !done ? el("span", { class: "hint", text: " " + t.note }) : null,
       warnText ? el("span", { class: "hint" }, " ⚠ " + warnText) : null)));
   }
   update();
@@ -690,7 +712,7 @@ async function liveFetch(why) {
     if (!data.ok) throw new Error(data.error === "unauthorized" ? "토큰이 맞지 않습니다." : String(data.error || "알 수 없는 오류").slice(0, 200));
     const sh = data.sheets || {};
     if (!Array.isArray(sh[LIVE_SHEETS.main])) throw new Error(`"${LIVE_SHEETS.main}" 탭을 찾지 못했습니다.`);
-    const ok1 = store.set(STORE.main, JSON.stringify({ name: `구글 시트 ${LIVE_SHEETS.main}`, rows: sh[LIVE_SHEETS.main] }));
+    const ok1 = store.set(STORE.main, JSON.stringify({ name: `구글 시트 ${LIVE_SHEETS.main}`, rows: sh[LIVE_SHEETS.main], doneRows: Array.isArray(data.doneRows) ? data.doneRows : [] }));
     if (Array.isArray(sh[LIVE_SHEETS.ref])) store.set(STORE.ref, JSON.stringify({ name: `구글 시트 ${LIVE_SHEETS.ref}`, rows: sh[LIVE_SHEETS.ref] }));
     store.set(STORE.liveAt, String(Date.now()));
     if (!ok1) throw new Error("이 창의 저장소에 보관하지 못했습니다.");
