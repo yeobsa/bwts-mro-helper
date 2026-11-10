@@ -69,7 +69,7 @@
 </style>
 </head>
 <body>
-<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-10d</span></h1></header>
+<header><h1>BWTS MRO Helper <span style="font-size:var(--fs-caption);font-weight:400">화면 버전 2026-11-10f</span></h1></header>
 <main>
   <section class="card" aria-labelledby="mail-title">
     <h2 id="mail-title">이 메일</h2>
@@ -192,6 +192,9 @@ const normVessel = v => cleanVessel(v).replace(/[^A-Z0-9가-힣]/g, "");
 const isFilled = v => !!v && !/^(x|-|n\/?a|미.*)$/i.test(v);
 const isReturned = v => /^(v|x|o|완료|회수|회수\s*완료)$/i.test(v || "");
 const isNoPo = v => { const s = String(v || "").trim(); return !s || /^(tba|tbd|tbc|미정|미등록|없음|n\/?a|-)$/i.test(s); };
+// PO 매칭 키: 숫자가 든 토큰만 인정 (E-MAIL·EMAIL·MAIL 등 글자-only 토큰은 버림 → 가짜 PO 오매칭 방지).
+// "E-MAIL 189-90554" → "18990554" / "E-MAIL"·"MAIL" 단독 → "" (무시)
+const poKeyOf = po => isNoPo(po) ? "" : String(po).toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim().split(/\s+/).filter(t => /[0-9]/.test(t)).join("");
 const splitNames = v => String(v || "").split(/[,/]/).map(s => s.trim()).filter(Boolean);
 function stageOf(days) {
   if (days === null) return { t: "만료일 확인 필요", lv: "inactive" };
@@ -244,7 +247,7 @@ function buildLedger() {
     }
     const paidOk = A.map.paidNote !== undefined ? /수금\s*완료/.test(get(r, "paidNote")) : isFilled(get(r, "paid"));
     const returned = get(r, "returned"), po = get(r, "po");
-    items.push({ vessel, vkey, words: cleanVessel(vessel).replace(/[^A-Z0-9가-힣]+/g, " ").trim(), po, poKey: isNoPo(po) ? "" : po.toUpperCase().replace(/[^A-Z0-9]+/g, ""),
+    items.push({ vessel, vkey, words: cleanVessel(vessel).replace(/[^A-Z0-9가-힣]+/g, " ").trim(), po, poKey: poKeyOf(po),
       owner: get(r, "owner"), manager: get(r, "manager"), port: get(r, "port"), country: get(r, "country"), attRaw: get(r, "attend"),
       rowNo: A.header + j + 2, prepDue: get(r, "prepDue"),
       stage: isFilled(doneRaw) ? 3 : (isFilled(get(r, "shipped")) || isFilled(get(r, "ready"))) ? 2 : get(r, "attend") ? 1 : 0,
