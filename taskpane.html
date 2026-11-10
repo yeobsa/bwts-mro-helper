@@ -72,8 +72,21 @@
       <label for="manager">내 담당자 이름<span class="hint">내 건과 다른 담당자 건을 구분해 보여줍니다</span></label>
       <select id="manager"><option value="">(관리대장을 먼저 불러오세요)</option></select>
     </div>
+    <details id="liveBox">
+      <summary>구글 시트 연결 (실시간)</summary>
+      <p class="muted">본 도구와 같은 연결 파일(ledger_link.txt — 1줄 웹 앱 주소, 2줄 토큰)을 고르면 관리대장 구글 시트("2026"·"2025" 탭)를 바로 읽습니다.</p>
+      <div class="field">
+        <label for="linkFile">연결 파일</label>
+        <input id="linkFile" type="file" accept=".txt,text/plain" aria-describedby="ledStatus">
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="linkRemember"> 이 PC에 연결 정보 기억<span class="hint">켜면 창을 열 때마다 고르지 않아도 됩니다. 대신 토큰이 이 PC의 Outlook 브라우저 저장소에 남습니다 — 공용 PC에서는 끄세요.</span></label>
+      </div>
+      <button type="button" class="btn" id="liveNow" disabled>지금 새로고침</button>
+      <button type="button" class="btn" id="linkClear">연결 정보 지우기</button>
+    </details>
     <details id="ledBox">
-      <summary>관리대장 불러오기</summary>
+      <summary>관리대장 불러오기 (CSV 파일)</summary>
       <p class="muted">구글 시트에서 받은 CSV를 고르세요. 이 Outlook 창의 브라우저 저장소에만 보관되고 외부로 보내지 않습니다.</p>
       <div class="field">
         <label for="fileMain">올해 시트 CSV (예: 2026)</label>
@@ -100,7 +113,8 @@ const FIELDS = [
   ["po", /\bp\.?o\.?\b|발주/i], ["owner", /owner|선주|선사|client|고객/i], ["manager", /담당자|담당|manager|\bPIC\b/i],
   ["remarks", /remark|비고/i], ["ready", /준비\s*완/], ["shipped", /출고/], ["paid", /수금/], ["returned", /구품/],
 ];
-const STORE = { main: "bwtsAddinMain.v1", ref: "bwtsAddinRef.v1", manager: "bwtsAddinManager.v1" };
+const STORE = { main: "bwtsAddinMain.v1", ref: "bwtsAddinRef.v1", manager: "bwtsAddinManager.v1", link: "bwtsAddinLink.v1", liveAt: "bwtsAddinLiveAt.v1" };
+const LIVE_SHEETS = { main: "2026", ref: "2025" }, LIVE_MAX_AGE = 5 * 60 * 1000; // 5분 지난 관리대장이면 창을 열 때 새로 읽음
 const $ = id => document.getElementById(id);
 function el(tag, attrs, ...children) {
   const n = document.createElement(tag);
@@ -150,8 +164,9 @@ function stageOf(days) {
   if (days <= RULES.expiryContactDays) return { t: "연락 시작", lv: "info" };
   return { t: "아직 시기 아님", lv: "success" };
 }
-function analyse(text, fileName) {
-  const rows = parseCsv(text);
+// src = { name, text } (CSV 파일) 또는 { name, rows } (구글 시트 실시간)
+function analyse(src) {
+  const fileName = src.name, rows = Array.isArray(src.rows) ? src.rows.map(r => r.map(c => String(c ?? ""))) : parseCsv(src.text || "");
   let header = 0, best = -1;
   rows.slice(0, 100).forEach((r, i) => { const s = FIELDS.filter(([, re]) => r.some(c => re.test(c))).length * 100 + r.filter(c => c.trim()).length; if (s > best) { best = s; header = i; } });
   const head = rows[header] || [], used = new Set(), map = {};
@@ -166,12 +181,12 @@ let ledger = null; // { items, managers, mainName, refCount }
 function buildLedger() {
   const mainText = store.get(STORE.main), refText = store.get(STORE.ref);
   if (!mainText) { ledger = null; return; }
-  const main = JSON.parse(mainText), A = analyse(main.text, main.name);
+  const main = JSON.parse(mainText), A = analyse(main);
   if (A.map.vessel === undefined) { ledger = { error: "올해 시트에서 선명 열을 찾지 못했습니다." }; return; }
   const get = (r, k) => A.map[k] === undefined ? "" : String(r[A.map[k]] ?? "").trim();
   const refBy = new Map();
   if (refText) {
-    const ref = JSON.parse(refText), R = analyse(ref.text, ref.name);
+    const ref = JSON.parse(refText), R = analyse(ref);
     if (R.map.vessel !== undefined && R.map.expiry !== undefined) for (const r of R.rows) {
       const v = normVessel(r[R.map.vessel]); let d = parseLooseDate(String(r[R.map.expiry] ?? "").trim(), R.year);
       if (!v || !d) continue; if (R.plusYear) d = addOneYear(d);
@@ -204,8 +219,8 @@ function renderSettings() {
   const sel = $("manager"), saved = store.get(STORE.manager) || "";
   if (!ledger || ledger.error) {
     sel.replaceChildren(el("option", { value: "", text: "(관리대장을 먼저 불러오세요)" }));
-    $("ledStatus").textContent = ledger && ledger.error ? ledger.error : "관리대장이 없습니다. 아래 \"관리대장 불러오기\"에서 CSV를 고르세요.";
-    $("ledBox").open = true; return;
+    $("ledStatus").textContent = ledger && ledger.error ? ledger.error : "관리대장이 없습니다. 위 \"구글 시트 연결\"에서 연결 파일을 고르거나 CSV를 불러오세요.";
+    return;
   }
   sel.replaceChildren(el("option", { value: "", text: "(고르지 않음)" }), ...ledger.managers.map(n => el("option", { value: n, text: n })));
   sel.value = ledger.managers.includes(saved) ? saved : "";
@@ -221,7 +236,7 @@ function matchMail(text) {
 }
 function renderHits(text) {
   const box = $("hits");
-  if (!ledger || ledger.error) { box.replaceChildren(el("div", { class: "banner lv-warning" }, "관리대장을 먼저 불러오세요 (아래 설정).")); return; }
+  if (!ledger || ledger.error) { box.replaceChildren(el("div", { class: "banner lv-warning" }, "관리대장을 먼저 불러오세요 (아래 설정 → 구글 시트 연결 또는 CSV).")); return; }
   const me = $("manager").value, hits = matchMail(text);
   if (!hits.length) { box.replaceChildren(el("div", { class: "state", text: "관리대장과 맞는 선박명·PO가 이 메일에 없습니다." })); return; }
   const mine = me && hits.some(x => splitNames(x.manager).includes(me));
@@ -268,11 +283,55 @@ $("ledClear").addEventListener("click", () => { store.del(STORE.main); store.del
 $("manager").addEventListener("change", () => { store.set(STORE.manager, $("manager").value); renderHits(lastText); });
 $("testRun").addEventListener("click", () => { lastText = $("testText").value; renderHits(lastText); });
 
+/* ===== 구글 시트 실시간 연결 (본 도구 v9와 같은 Apps Script 통로) ===== */
+let link = (() => { try { return JSON.parse(store.get(STORE.link) || "null"); } catch { return null; } })(); // 기억을 켠 경우에만 저장소에 있음
+$("linkRemember").checked = !!link;
+function setLink(l) {
+  link = l; $("liveNow").disabled = !link;
+  if (link && $("linkRemember").checked) store.set(STORE.link, JSON.stringify(link)); else store.del(STORE.link);
+}
+async function liveFetch(why) {
+  if (!link) return;
+  $("liveNow").disabled = true; $("ledStatus").textContent = "구글 시트에서 불러오는 중…";
+  try {
+    const res = await fetch(link.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token: link.token, sheets: [LIVE_SHEETS.main, LIVE_SHEETS.ref] }) });
+    const data = await res.json().catch(() => null);
+    if (!data) throw new Error("응답을 읽지 못했습니다 (웹 앱 배포를 확인하세요).");
+    if (!data.ok) throw new Error(data.error === "unauthorized" ? "토큰이 맞지 않습니다." : String(data.error || "알 수 없는 오류").slice(0, 200));
+    const sh = data.sheets || {};
+    if (!Array.isArray(sh[LIVE_SHEETS.main])) throw new Error(`"${LIVE_SHEETS.main}" 탭을 찾지 못했습니다.`);
+    const ok1 = store.set(STORE.main, JSON.stringify({ name: `구글 시트 ${LIVE_SHEETS.main}`, rows: sh[LIVE_SHEETS.main] }));
+    if (Array.isArray(sh[LIVE_SHEETS.ref])) store.set(STORE.ref, JSON.stringify({ name: `구글 시트 ${LIVE_SHEETS.ref}`, rows: sh[LIVE_SHEETS.ref] }));
+    store.set(STORE.liveAt, String(Date.now()));
+    if (!ok1) throw new Error("이 창의 저장소에 보관하지 못했습니다.");
+    buildLedger(); renderSettings(); renderHits(lastText);
+    $("ledStatus").textContent += ` · 구글 시트 ${new Date().toTimeString().slice(0, 5)} 기준`;
+  } catch (err) {
+    $("ledStatus").textContent = (err instanceof TypeError ? "구글에 연결하지 못했습니다 (인터넷·회사망 확인)." : err.message) + (ledger && !ledger.error ? " — 마지막으로 불러온 관리대장으로 보여줍니다." : "");
+  } finally { $("liveNow").disabled = !link; }
+}
+$("linkFile").addEventListener("change", async () => {
+  const f = $("linkFile").files[0]; if (!f) return;
+  const lines = f.size <= 4096 ? (await f.text()).replace(/^﻿/, "").split(/\r?\n/).map(x => x.trim()).filter(Boolean) : [];
+  const url = lines[0] || "", token = lines[1] || "";
+  $("linkFile").value = "";
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url)) { $("ledStatus").textContent = "1줄이 Apps Script 웹 앱 주소(…/exec)가 아닙니다."; return; }
+  if (token.length < 24 || /\s/.test(token)) { $("ledStatus").textContent = "2줄 토큰이 너무 짧거나 공백이 있습니다."; return; }
+  setLink({ url, token }); liveFetch("file");
+});
+$("linkRemember").addEventListener("change", () => setLink(link));
+$("liveNow").addEventListener("click", () => liveFetch("button"));
+$("linkClear").addEventListener("click", () => { setLink(null); $("ledStatus").textContent = "연결 정보를 지웠습니다. (불러온 관리대장은 남아 있음 — 지우려면 아래 \"저장된 관리대장 지우기\")"; });
+
 let started = false;
 function start(inOutlook) {
   if (started) return; started = true;
   try { buildLedger(); } catch { ledger = { error: "저장된 관리대장을 읽지 못했습니다. 다시 불러오세요." }; }
   renderSettings();
+  $("liveNow").disabled = !link;
+  if (link) { $("ledBox").open = false; const at = +(store.get(STORE.liveAt) || 0); if (!ledger || ledger.error || Date.now() - at > LIVE_MAX_AGE) liveFetch("open"); }
+  else if (!ledger || ledger.error) $("liveBox").open = true;
   if (inOutlook) {
     readCurrentMail();
     // 창을 고정한 경우 메일을 바꿀 때마다 다시 대조 (지원하는 Outlook에서만)
