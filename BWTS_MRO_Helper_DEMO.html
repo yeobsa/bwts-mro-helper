@@ -1,0 +1,2882 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PANASIA BWTS MRO HELPER (데모)</title>
+<style>
+  /* 회사 디자인 표준(20_design-system.md) 값만 사용 */
+  :root {
+    --primary-900: #0B2A4A; --primary-800: #123B63; --primary-700: #1C4F82; --primary-600: #2566A3;
+    --primary-500: #2F7BC1; --primary-400: #5A9BD4; --primary-300: #8BB9E5; --primary-200: #BBD6F2; --primary-100: #E3F0FA;
+    --green-600: #2E8B57; --green-100: #E9F8EF;
+    --color-primary: #2F7BC1; --color-primary-hover: #2566A3;
+    --color-success: #22C55E; --color-warning: #F59E0B; --color-danger: #EF4444; --color-info: #3B82F6;
+    --gray-900: #111827; --gray-800: #1F2937; --gray-700: #374151; --gray-600: #4B5563; --gray-500: #6B7280;
+    --gray-400: #9CA3AF; --gray-300: #D1D5DB; --gray-200: #E5E7EB; --gray-100: #F3F4F6; --gray-50: #F9FAFB;
+    --color-bg: #F9FAFB; --color-card: #FFFFFF;
+    --font: Pretendard, Inter, "Noto Sans KR", system-ui, sans-serif;
+    --fs-h1: 24px; --fs-h2: 20px; --fs-h3: 18px; --fs-body-lg: 16px; --fs-body: 14px; --fs-caption: 12px;
+    --sp-xs: 4px; --sp-sm: 8px; --sp-md: 16px; --sp-lg: 24px; --sp-xl: 32px; --sp-2xl: 40px;
+    --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px; --radius-xl: 12px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05); --shadow-md: 0 4px 6px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-bg); color: var(--gray-900); font-family: var(--font); font-size: var(--fs-body); line-height: 1.5; }
+  header { background: var(--primary-700); color: var(--color-card); padding: var(--sp-sm) var(--sp-lg); position: sticky; top: 0; z-index: 20; }
+  header h1 { margin: 0; font-size: var(--fs-h2); font-weight: 600; }
+  .brand { height: 1.15em; width: auto; margin-right: .6em; vertical-align: middle; }
+  .led-setuptoggle { text-align: right; margin-bottom: var(--sp-xs); }
+  .ledger.setup-collapsed #led-title, .ledger.setup-collapsed #ledSetup, .ledger.setup-collapsed #ledManagerBox { display: none; }
+  .olk-sec-head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-sm); margin-bottom: var(--sp-sm); font-weight: 600; }
+  header p { margin: var(--sp-xs) 0 0; font-size: var(--fs-body); }
+  main { max-width: 1440px; margin: 0 auto; padding: var(--sp-lg); display: grid; grid-template-columns: 440px 1fr; gap: var(--sp-lg); align-items: start; }
+  @media (max-width: 1024px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--color-card); border: 1px solid var(--gray-200); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: var(--sp-lg); }
+  .card + .card { margin-top: var(--sp-md); }
+  h2 { font-size: var(--fs-h2); font-weight: 600; margin: 0 0 var(--sp-md); color: var(--gray-900); }
+  h3 { font-size: var(--fs-h3); font-weight: 600; margin: var(--sp-lg) 0 var(--sp-sm); color: var(--gray-900); }
+  .muted { color: var(--gray-600); font-size: var(--fs-caption); }
+
+  /* 폼 */
+  fieldset { border: 0; padding: 0; margin: 0 0 var(--sp-md); }
+  legend { font-size: var(--fs-h3); font-weight: 600; padding: 0; margin-bottom: var(--sp-sm); }
+  .field { margin-bottom: var(--sp-md); }
+  .field label, .field .label { display: block; font-weight: 600; margin-bottom: var(--sp-xs); }
+  .req { color: var(--gray-900); }
+  .hint { display: block; font-weight: 400; color: var(--gray-600); font-size: var(--fs-caption); }
+  input[type=text], input[type=date], input[type=number], textarea, select {
+    width: 100%; padding: var(--sp-sm); font: inherit; color: var(--gray-900);
+    border: 1px solid var(--gray-300); border-radius: var(--radius-md); background: var(--color-card);
+  }
+  textarea { min-height: 64px; resize: vertical; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary-500); box-shadow: 0 0 0 2px var(--primary-200); }
+  .has-error input, .has-error textarea { border-color: var(--color-danger); }
+  .err { display: none; margin-top: var(--sp-xs); padding-left: var(--sp-sm); border-left: 4px solid var(--color-danger); color: var(--gray-900); font-size: var(--fs-caption); }
+  .has-error .err { display: block; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-md); }
+  .exp-row { display: grid; grid-template-columns: 1fr 140px auto; gap: var(--sp-sm); align-items: start; margin-bottom: var(--sp-sm); }
+  .exp-head { font-size: var(--fs-caption); color: var(--gray-600); margin-bottom: var(--sp-xs); }
+  .exp-row .err { grid-column: 1 / -1; margin-top: 0; }
+  .exp-row.has-error .err { display: block; }
+  .exp-row.has-error input { border-color: var(--color-danger); }
+  /* 관리대장 목록 (표준 §11 테이블) */
+  .ledger { grid-column: 1 / -1; }
+  .ledger + .card { margin-top: 0; }
+  .map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-md); }
+  .led-bar { display: flex; flex-wrap: wrap; gap: var(--sp-md); align-items: center; justify-content: space-between; margin: var(--sp-md) 0 var(--sp-sm); }
+  .led-bar .check { margin-bottom: 0; }
+  .table-wrap { overflow-x: auto; }
+  .led-scroll { resize: vertical; height: 46vh; min-height: 90px; overflow: auto; }
+  .led-fbtn { margin-left: 4px; border: none; background: transparent; cursor: pointer; font-size: 10px; color: var(--gray-700); padding: 0 2px; }
+  .led-fbtn.active { color: var(--primary-600, var(--primary-500)); font-weight: 700; }
+  table.led { width: 100%; border-collapse: collapse; font-size: var(--fs-body); }
+  table.led th { background: var(--gray-100); text-align: left; font-weight: 600; height: 40px; padding: 0 var(--sp-sm); border-bottom: 1px solid var(--gray-200); white-space: nowrap; }
+  table.led td { height: 40px; padding: 0 var(--sp-sm); border-bottom: 1px solid var(--gray-200); }
+  table.led tbody tr:hover { background: var(--primary-100); }
+  table.led th button { font: inherit; font-weight: 600; background: none; border: 0; padding: 0; color: var(--gray-900); cursor: pointer; }
+  table.led th button:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+  table.led .btn { padding: var(--sp-xs) var(--sp-sm); }
+  .ledger input[type=file] { font: inherit; max-width: 100%; }
+  .ledger input[type=file]:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+  /* 칸반 보드 (v4) */
+  .view-switch { display: flex; gap: var(--sp-sm); margin-top: var(--sp-md); }
+  .led-manager { max-width: 320px; margin: var(--sp-md) 0 0; }
+  .live-row { display: flex; flex-wrap: wrap; gap: var(--sp-sm) var(--sp-md); align-items: center; }
+  .live-row .check { margin-bottom: 0; }
+  .ai-box details.live-token { margin-top: var(--sp-sm); padding-top: var(--sp-sm); }
+  .ai-box details.live-token summary { font-size: var(--fs-body); }
+  .ver { color: var(--color-card); font-size: var(--fs-caption); }
+  .legend { display: flex; flex-wrap: wrap; gap: var(--sp-xs) var(--sp-md); align-items: center; font-size: var(--fs-caption); color: var(--gray-700); background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: var(--sp-sm) var(--sp-md); margin-bottom: var(--sp-md); }
+  .legend strong { color: var(--gray-900); }
+  .view-switch .btn[aria-pressed=true] { background: var(--primary-100); border-color: var(--primary-500); color: var(--primary-700); }
+  .board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-md); }
+  @media (max-width: 1024px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) { .board { grid-template-columns: 1fr; } }
+  .lane { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: var(--sp-sm); min-width: 0; }
+  .lane h3 { font-size: var(--fs-body-lg); margin: 0; }
+  .lane .lane-desc { font-size: var(--fs-caption); color: var(--gray-600); margin: 0 0 var(--sp-sm); }
+  .lane ul { list-style: none; margin: 0; padding: 0; max-height: 70vh; overflow-y: auto; }
+  .lane .state { padding: var(--sp-md) var(--sp-sm); }
+  .kcard { background: var(--color-card); border: 1px solid var(--gray-200); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); padding: var(--sp-sm); margin-bottom: var(--sp-sm); }
+  .kcard .name { font-weight: 600; word-break: break-word; }
+  .kcard .meta { font-size: var(--fs-caption); color: var(--gray-600); word-break: break-word; }
+  .kcard .exp { font-size: var(--fs-caption); margin-top: var(--sp-xs); }
+  .kcard .acts { display: flex; flex-wrap: wrap; gap: var(--sp-xs); margin-top: var(--sp-sm); }
+  .kcard .btn { padding: var(--sp-xs) var(--sp-sm); font-size: var(--fs-caption); }
+  .kcard details.tasks { border-top: 1px solid var(--gray-200); padding-top: var(--sp-xs); margin-top: var(--sp-sm); }
+  .kcard details.tasks summary { font-size: var(--fs-caption); font-weight: 600; margin: 0; }
+  .prog { display: inline-block; width: 72px; height: 8px; margin-left: var(--sp-xs); vertical-align: middle; background: var(--gray-200); border-radius: var(--radius-sm); overflow: hidden; }
+  .prog > span { display: block; height: 100%; background: var(--primary-500); }
+  .prog.full > span { background: var(--color-success); }
+  .kcard .tasks .check { font-size: var(--fs-caption); margin: var(--sp-xs) 0 0; }
+  .kcard .tasks .check label { font-weight: 400; }
+  .kcard .tasks .check input:disabled + label { color: var(--gray-700); }
+  .sync-box { border: 1px solid var(--gray-200); border-radius: var(--radius-md); background: var(--gray-50); padding: var(--sp-sm); margin-top: var(--sp-sm); font-size: var(--fs-caption); }
+  .sync-box .label { font-weight: 600; margin-bottom: var(--sp-xs); }
+  .sync-box .field { margin-bottom: var(--sp-xs); }
+  .sync-box input[type=date], .sync-box select { padding: var(--sp-xs); }
+  .sync-box .btn { margin-top: var(--sp-xs); }
+  .olk-mail { border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: var(--sp-sm); margin-top: var(--sp-sm); background: var(--color-card); }
+  .olk-mail.mine { border-left: 3px solid var(--primary-500); }
+  .olk-mail.nomatch { opacity: .7; }
+  .olk-h { display: flex; justify-content: space-between; gap: var(--sp-sm); font-size: var(--fs-caption); color: var(--gray-700); }
+  .olk-from { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .olk-date { white-space: nowrap; }
+  .olk-subj { margin: 2px 0 var(--sp-xs); font-weight: 500; word-break: break-word; }
+  .olk-tags { display: flex; flex-wrap: wrap; gap: var(--sp-xs); }
+  .olk-tag { font-size: var(--fs-caption); padding: 1px 8px; border-radius: 999px; background: var(--gray-100); color: var(--gray-700); }
+  .olk-tag.warn { font-weight: 600; background: var(--gray-200); }
+  .olk-wrap { display: flex; gap: var(--sp-md); align-items: flex-start; }
+  .olk-left { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-sm); }
+  .olk-list { flex: none; min-width: 0; height: 340px; min-height: 110px; resize: vertical; overflow: auto; display: flex; flex-direction: column; gap: var(--sp-sm); padding-right: var(--sp-xs); }
+  .olk-work { border-top: 1px solid var(--gray-200); padding-top: var(--sp-sm); }
+  .olk-filters { display: flex; flex-wrap: wrap; gap: var(--sp-xs); margin-bottom: var(--sp-sm); }
+  .olk-filters input, .olk-filters select { font-size: var(--fs-caption); padding: var(--sp-xs); border: 1px solid var(--gray-300, var(--gray-200)); border-radius: var(--radius-sm); }
+  .olk-filters input { flex: 1 1 180px; min-width: 0; }
+  .olk-detail { flex: 1 1 320px; min-width: 0; border-left: 1px solid var(--gray-200); padding-left: var(--sp-md); }
+  .olk-mail { cursor: pointer; }
+  .olk-mail.sel { outline: 2px solid var(--primary-500); outline-offset: 1px; }
+  .olk-dh { margin-bottom: var(--sp-sm); }
+  .olk-dh .name { font-weight: 600; font-size: var(--fs-body-lg); word-break: break-word; }
+  .olk-dh .who { color: var(--gray-700); font-size: var(--fs-caption); }
+  .olk-dh .row { font-size: var(--fs-caption); color: var(--gray-800); margin-top: 2px; }
+  .olk-warn { font-weight: 600; font-size: var(--fs-caption); margin: var(--sp-xs) 0; }
+  .olk-mailview { border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: var(--sp-sm); margin-bottom: var(--sp-md); }
+  .olk-body { white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow: auto; font-size: var(--fs-caption); background: var(--gray-50); padding: var(--sp-sm); border-radius: var(--radius-sm); margin: var(--sp-xs) 0; font-family: inherit; }
+  .led-setup > summary { cursor: pointer; font-weight: 600; padding: var(--sp-xs) 0; }
+  .olk-table { width: 100%; border-collapse: collapse; font-size: var(--fs-caption); }
+  .olk-table th, .olk-table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--gray-200); white-space: nowrap; }
+  .olk-table thead th { position: sticky; top: 0; background: var(--gray-100); z-index: 1; }
+  .olk-table td.subj { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+  .olk-table tbody tr { cursor: pointer; }
+  .olk-table tbody tr:hover { background: var(--gray-50); }
+  .olk-table tbody tr.sel { background: var(--primary-100, var(--gray-100)); }
+  .olk-table tbody tr.mine td.vessel { border-left: 3px solid var(--primary-500); font-weight: 600; }
+  .olk-fbtn { margin-left: 4px; border: none; background: transparent; cursor: pointer; font-size: 10px; color: var(--gray-700); padding: 0 2px; }
+  .olk-fbtn.active { color: var(--primary-600, var(--primary-500)); font-weight: 700; }
+  .olk-fpop { position: fixed; z-index: 50; background: var(--color-card); border: 1px solid var(--gray-300, var(--gray-200)); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0,0,0,.18); padding: var(--sp-xs); max-height: 280px; overflow: auto; min-width: 150px; }
+  .olk-fpop label { display: flex; gap: 6px; align-items: center; font-size: var(--fs-caption); font-weight: 400; padding: 2px 4px; white-space: nowrap; cursor: pointer; }
+  .olk-fpop label:hover { background: var(--gray-50); }
+  @media (max-width: 720px) { .olk-wrap { flex-direction: column; } .olk-list { height: 240px; } .olk-detail { border-left: none; border-top: 1px solid var(--gray-200); padding-left: 0; padding-top: var(--sp-sm); } }
+  .ai-box { border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: var(--sp-md); margin-bottom: var(--sp-md); background: var(--gray-50); }
+  .ai-box .banner { margin-top: var(--sp-sm); }
+  .ai-box input[type=file] { font: inherit; max-width: 100%; }
+  .ai-box input[type=file]:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+  .ai-list { margin: var(--sp-xs) 0 0; padding-left: var(--sp-lg); }
+  .check { display: flex; gap: var(--sp-sm); align-items: flex-start; margin-bottom: var(--sp-sm); }
+  .check input { margin-top: var(--sp-xs); width: 16px; height: 16px; }
+  details { border-top: 1px solid var(--gray-200); padding-top: var(--sp-md); margin-top: var(--sp-md); }
+  summary { cursor: pointer; font-size: var(--fs-h3); font-weight: 600; margin-bottom: var(--sp-md); }
+  summary:focus-visible, button:focus-visible, [role=tab]:focus-visible, input[type=checkbox]:focus-visible { outline: 2px solid var(--primary-500); outline-offset: 2px; }
+
+  /* 버튼 (표준 §9) */
+  .btn { font: inherit; font-weight: 600; border-radius: var(--radius-md); padding: var(--sp-sm) var(--sp-md); cursor: pointer; border: 1px solid transparent; }
+  /* 표준 §9.2는 Primary 500이지만 흰 글자 대비 4.45:1로 §18(4.5 이상)에 못 미쳐 Primary 600 사용 (사용자 확인, 디지털혁신팀 확인 필요) */
+  .btn-primary { background: var(--primary-600); color: var(--color-card); }
+  .btn-primary:hover { background: var(--primary-700); }
+  .btn-secondary { background: var(--color-card); color: var(--gray-800); border-color: var(--gray-300); }
+  .btn-secondary:hover { background: var(--primary-100); }
+  .btn:disabled { background: var(--gray-100); color: var(--gray-500); border-color: var(--gray-200); cursor: not-allowed; }
+  .btn-block { width: 100%; font-size: var(--fs-body-lg); padding: var(--sp-md); }
+  .samples { display: flex; flex-wrap: wrap; gap: var(--sp-sm); margin-bottom: var(--sp-md); }
+  .actions { display: flex; gap: var(--sp-sm); margin-top: var(--sp-md); }
+  .actions .btn-primary { flex: 1; font-size: var(--fs-body-lg); padding: var(--sp-md); }
+
+  /* 상태 표시 (표준 §16) */
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: var(--radius-sm); margin-right: var(--sp-xs); vertical-align: middle; }
+  .lv-error { --lv: var(--color-danger); } .lv-warning { --lv: var(--color-warning); }
+  .lv-info { --lv: var(--color-info); } .lv-success { --lv: var(--color-success); } .lv-inactive { --lv: var(--gray-400); }
+  .dot { background: var(--lv); }
+  .state { padding: var(--sp-xl) var(--sp-md); text-align: center; color: var(--gray-600); }
+  .banner { border: 1px solid var(--gray-200); border-left: 4px solid var(--lv); border-radius: var(--radius-md); padding: var(--sp-sm) var(--sp-md); margin-bottom: var(--sp-md); background: var(--color-card); }
+
+  /* 요약 */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-md); margin-bottom: var(--sp-md); }
+  @media (max-width: 1280px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  .kpi { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: var(--sp-md); }
+  .kpi .k { font-size: var(--fs-caption); color: var(--gray-600); }
+  .kpi .v { font-size: var(--fs-h2); font-weight: 600; margin-top: var(--sp-xs); }
+  .kpi .d { font-size: var(--fs-caption); color: var(--gray-600); margin-top: var(--sp-xs); }
+
+  /* 판정 근거 (A) */
+  .checks { list-style: none; padding: 0; margin: 0; }
+  .checks li { border: 1px solid var(--gray-200); border-left: 4px solid var(--lv); border-radius: var(--radius-md); padding: var(--sp-sm) var(--sp-md); margin-bottom: var(--sp-sm); }
+  .checks .t { font-weight: 600; }
+  .why { display: grid; grid-template-columns: 1fr auto 1fr auto 1.2fr; gap: var(--sp-sm); align-items: start; margin-top: var(--sp-xs); font-size: var(--fs-caption); color: var(--gray-700); }
+  .why .arrow { color: var(--gray-500); }
+  .why b { display: block; color: var(--gray-600); font-weight: 400; }
+  .why span.val { color: var(--gray-900); word-break: break-word; }
+  @media (max-width: 720px) { .why { grid-template-columns: 1fr; } .why .arrow { display: none; } }
+
+  /* 탭 */
+  [role=tablist] { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--gray-200); margin-bottom: var(--sp-md); }
+  [role=tab] { font: inherit; background: none; border: 0; border-bottom: 2px solid transparent; padding: var(--sp-sm) var(--sp-md); cursor: pointer; color: var(--gray-700); }
+  [role=tab][aria-selected=true] { border-bottom-color: var(--primary-500); color: var(--primary-700); font-weight: 600; }
+  [role=tab]:hover { background: var(--primary-100); }
+  .draft { border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: var(--sp-md); margin-bottom: var(--sp-md); }
+  .draft-head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-sm); flex-wrap: wrap; }
+  .draft-title { font-size: var(--fs-body-lg); font-weight: 600; }
+  .chip { font-size: var(--fs-caption); border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 0 var(--sp-sm); background: var(--gray-50); }
+  .reason { margin-top: var(--sp-sm); color: var(--gray-700); }
+  .box-label { display: flex; justify-content: space-between; align-items: center; margin: var(--sp-md) 0 var(--sp-xs); font-weight: 600; }
+  .subject, .body { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: var(--sp-sm) var(--sp-md); white-space: pre-wrap; word-break: break-word; margin: 0; font-family: var(--font); font-size: var(--fs-body); }
+  .body { line-height: 1.6; }
+  .verify { background: var(--primary-100); border-radius: var(--radius-md); padding: var(--sp-sm) var(--sp-md); margin-top: var(--sp-md); }
+  .verify .label { font-weight: 600; margin-bottom: var(--sp-xs); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  footer { max-width: 1440px; margin: 0 auto; padding: 0 var(--sp-lg) var(--sp-lg); color: var(--gray-600); font-size: var(--fs-caption); }
+</style>
+</head>
+<body>
+<header>
+  <h1><svg class="brand" viewBox="0 0 156 30" height="22" role="img" aria-label="PANASIA" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M17.1343 10.8005H9.33917L9.99376 5.71089L17.7939 5.70572L17.1343 10.8005ZM25.0494 11.3338L25.8439 5.17242C26.2086 2.30921 24.2699 0.0051776 21.5066 0H21.5016H2.73329L0 21.2696H7.99002L8.59963 16.5062H18.3985C21.1668 16.5062 24.6846 14.1866 25.0494 11.3338Z"/><path fill="currentColor" d="M62.4518 22.6572C62.4518 22.6572 54.9665 29.9938 56.1357 21.2541C56.1357 21.2541 56.9652 14.7613 57.4749 10.7694C59.7785 14.518 63.656 20.8347 63.9209 21.2592C63.4262 21.7045 62.9315 22.1601 62.4518 22.6572ZM103.226 0C100.458 0 97.9197 2.30921 97.5499 5.17242L97.1451 8.31005C96.7804 11.1681 98.7241 13.4877 101.492 13.4877H110.742L110.477 15.5587H96.0008L90.889 0.0155328H82.884L73.4599 15.9159C72.9952 16.0247 72.5155 16.1489 72.0208 16.3146L74.1045 0.0155328H66.3643C66.3643 0.0155328 65.5648 6.2649 65.0652 10.174C62.7366 6.35809 58.859 0.0155328 58.859 0.0155328H51.1189L48.3956 21.2541C47.9808 24.0603 49.5099 25.9087 49.5099 25.9087C49.5099 25.9087 51.5736 28.8289 56.1357 28.0833C56.6754 28.8185 58.2994 30.4029 61.6173 29.0567C61.6173 29.0567 62.3618 28.7771 63.2213 28.3267C63.2213 28.3267 67.3537 25.9864 70.7416 26.1624C70.7416 26.1624 74.1995 26.0174 76.7878 27.871L79.1813 25.0855C78.3868 24.3347 75.7485 22.3465 70.7416 23.0869C70.7416 23.0869 67.8934 23.5115 65.1551 25.2822C65.1551 25.2822 64.0758 25.9087 63.0114 26.6129C63.0114 26.6129 60.0683 28.7564 58.5792 27.2238C58.7041 27.1617 58.8191 27.1047 58.949 27.0426C58.949 27.0426 61.8422 25.5515 64.2607 23.5943C64.2607 23.5943 69.1576 19.8406 73.6998 19.4108C73.6998 19.4108 78.152 18.6394 82.0196 21.7666L84.3281 19.0795C84.1582 18.9034 83.1239 17.7954 81.35 16.8893C82.8391 14.1814 85.1826 9.91511 85.5624 9.24202L85.6923 9.23684C85.9721 10.2517 89.1251 21.2592 89.1251 21.2592L112.635 21.2748C115.399 21.2748 117.937 18.9552 118.307 16.0972L118.707 12.9647C119.076 10.1067 117.133 7.78711 114.364 7.78711H105.115L105.385 5.71089L118.817 5.71607V5.71089L118.882 5.1776C118.882 5.17242 118.887 5.17242 118.887 5.16725L119.551 0H103.226Z"/><path fill="currentColor" d="M123.339 0.015625L120.621 21.2541H128.706L131.419 0.015625H123.339Z"/><path fill="currentColor" d="M41.4048 0.015625H33.3898L20.8477 21.2541H29.4073C29.4073 21.2541 35.5135 10.231 36.0732 9.23693L36.2081 9.23176C36.4829 10.2466 39.6309 21.2541 39.6309 21.2541H48.3855L41.4048 0.015625Z"/><path fill="currentColor" d="M148.303 0.015625H140.298L128.75 21.2541H137.31C137.31 21.2541 142.421 10.231 142.986 9.23693L143.121 9.23176C143.396 10.2466 146.549 21.2541 146.549 21.2541H155.293L148.303 0.015625Z"/></svg><span style="margin-left:.1em">BWTS MRO OPERATION HELPER</span> <span class="ver">화면 버전 2026-11-11m</span></h1>
+</header>
+
+<main>
+  <!-- ===================== 관리대장 ===================== -->
+  <section class="card ledger" aria-labelledby="led-title">
+    <div class="led-setuptoggle"><button type="button" class="btn btn-secondary" id="ledSetupToggle">⚙ 설정 접기 ▴</button></div>
+    <h2 id="led-title">관리대장 불러오기 · 칸반 보드 (테스트)</h2>
+    <details id="ledSetup" class="led-setup" open>
+      <summary>⚙ 관리대장 연결·설정<span class="hint"> — 불러오면 자동으로 접힙니다. 바꿀 때만 펼치세요</span></summary>
+    <div class="ai-box" role="group" aria-labelledby="live-title">
+      <div class="label" id="live-title"><strong>구글 시트에서 바로 불러오기 (실시간)</strong></div>
+      <p class="muted" style="margin-top:0">관리대장 시트에 붙인 읽기 전용 통로(Apps Script)로 "2026"·"2025" 탭을 바로 읽습니다. 설치 방법: RESULT/google-sheet-link/README.md</p>
+      <div class="field">
+        <label for="liveFile">연결 파일<span class="hint">secrets 폴더의 ledger_link.txt (1줄: 웹 앱 주소, 2줄: 토큰). 아래 "기억"을 켜지 않으면 창을 닫을 때 잊습니다.</span></label>
+        <input id="liveFile" type="file" accept=".txt,text/plain" aria-describedby="liveStatus">
+      </div>
+      <div class="live-row" style="margin-bottom:var(--sp-sm)">
+        <div class="check"><input type="checkbox" id="liveRemember"><label for="liveRemember">이 PC에 연결 정보 기억<span class="hint">켜면 다음에 열 때 자동으로 연결됩니다. 토큰이 이 PC 브라우저 저장소에 남아, 이 PC에서 여는 다른 HTML 파일도 읽을 수 있습니다 — 본인 PC에서만, 공용 PC에서는 끄세요.</span></label></div>
+        <button type="button" class="btn btn-secondary" id="liveForget">연결 정보 지우기</button>
+      </div>
+      <div class="live-row">
+        <button type="button" class="btn btn-primary" id="liveRun" disabled>관리대장 새로고침</button>
+        <div class="check"><input type="checkbox" id="liveAuto" checked><label for="liveAuto">5분마다 자동 새로고침<span class="hint" id="liveNext"></span></label></div>
+      </div>
+      <details class="live-token">
+        <summary>토큰 새로 만들기 (처음 설치·토큰 교체할 때만)</summary>
+        <p class="muted" style="margin-top:0">누르면 새 문자열을 보여주기만 합니다 (저장·전송 안 함). 지금 연결에는 영향이 없습니다.</p>
+        <button type="button" class="btn btn-secondary" id="liveTokenNew">토큰 만들기</button>
+        <pre class="body" id="liveTokenOut" hidden></pre>
+      </details>
+      <div class="hint" id="liveStatus" aria-live="polite"></div>
+    </div>
+    <p class="muted">또는 구글 시트에서 [파일 → 다운로드 → 쉼표로 구분된 값(.csv)]으로 받은 파일을 고르세요. 파일은 이 PC 안에서만 읽고, 외부로 보내지 않습니다.</p>
+    <div class="map-grid">
+      <div class="field">
+        <label for="ledFile">관리대장 CSV 파일 (목록·보드에 올릴 시트)<span class="hint">.csv, 5MB 이하 — 예: 2026 시트</span></label>
+        <input id="ledFile" type="file" accept=".csv,text/csv" aria-describedby="ledStatus">
+        <div class="hint" id="ledStatus" aria-live="polite"></div>
+      </div>
+      <div class="field">
+        <label for="ledRefFile">작년 시트 CSV (만료일 참고, 선택)<span class="hint">올해 아직 서비스하지 않은 배의 만료일 = 작년 승선 일자 + 1년 — 예: 2025 시트</span></label>
+        <input id="ledRefFile" type="file" accept=".csv,text/csv" aria-describedby="ledRefStatus">
+        <div class="hint" id="ledRefStatus" aria-live="polite"></div>
+      </div>
+    </div>
+    <details id="ledMap" hidden>
+      <summary>열 연결 확인</summary>
+      <p class="muted" style="margin-top:0">제목을 보고 자동으로 골랐습니다. 틀리면 여기서 바꾸세요. 센서 교정 만료일과 선박명은 꼭 연결해야 합니다.</p>
+      <div class="map-grid">
+        <div class="field"><label for="ledHeader">제목 줄</label><select id="ledHeader"></select></div>
+        <div class="field"><label for="ledStart">데이터 시작 행<span class="hint">이 행부터 목록에 넣습니다</span></label><input id="ledStart" type="number" min="1" step="1" inputmode="numeric"></div>
+        <div class="field"><label for="ledYear">연도 없는 날짜의 연도<span class="hint">"3/15"처럼 월/일만 있을 때. 파일 이름에서 추정</span></label><input id="ledYear" type="number" min="2000" max="2100" step="1" inputmode="numeric"></div>
+      </div>
+      <div class="check"><input type="checkbox" id="ledPlusYear"><label for="ledPlusYear">만료일 = 연결한 날짜 + 1년 (2025 시트 R열 교정일 기준)</label></div>
+      <div class="map-grid" id="ledMapGrid"></div>
+    </details>
+    </details>
+    <div class="field led-manager" id="ledManagerBox" hidden>
+      <label for="ledManager">담당자로 보기<span class="hint">관리대장 담당자 열 기준. 고른 담당자는 이 PC 브라우저에 기억됩니다 (화면 거르기 기능 — 다른 사람의 열람을 막지는 않음)</span></label>
+      <select id="ledManager"></select>
+    </div>
+    <div id="olkBox" hidden>
+      <div class="olk-sec-head" id="olkSecHead">
+        <strong>Outlook 받은편지함 가져오기 (로컬 연결)</strong>
+        <button type="button" class="btn btn-secondary" id="olkCtrlToggle" aria-expanded="true">접기 ▴</button>
+      </div>
+      <div id="olkCtrl">
+      <div class="live-row">
+        <button type="button" class="btn btn-primary" id="olkRun">받은편지함 불러오기</button>
+        <select id="olkN" class="draft-subj" style="max-width:9em" aria-label="불러올 메일 개수"><option value="60">최근 60건</option><option value="100" selected>최근 100건</option><option value="200">최근 200건</option><option value="300">최근 300건</option><option value="500">최근 500건</option></select>
+        <div class="check"><input type="checkbox" id="olkMine"><label for="olkMine">내 담당 건만<span class="hint">"담당자로 보기"에서 고른 담당자 건만</span></label></div>
+        <button type="button" class="btn btn-secondary" id="olkConnToggle" aria-expanded="false">연결 주소 ▾</button>
+      </div>
+      <div id="olkConn" hidden>
+        <p class="muted" style="margin-top:0">내 PC에서 "BWTS Outlook 연결" 프로그램을 켜 두면, 클래식 Outlook 받은편지함을 읽어 관리대장과 대조해 보여줍니다. 설치·실행: RESULT/outlook-bridge/README.md. 메일은 이 PC 안에서만 읽고 외부로 보내지 않습니다 (읽기 전용).</p>
+        <div class="field">
+          <label for="olkUrl">연결 주소<span class="hint">기본값 그대로 두면 됩니다. 브리지를 다른 포트로 켰을 때만 바꾸세요.</span></label>
+          <input id="olkUrl" type="text" value="http://127.0.0.1:8765" spellcheck="false" autocomplete="off">
+        </div>
+      </div>
+      </div>
+      <div class="hint" id="olkStatus" aria-live="polite"></div>
+      <div class="olk-filters" role="group" aria-label="받은편지함 필터">
+        <input type="text" id="olkSearch" placeholder="검색 (선박·선사·담당·제목·보낸사람)" autocomplete="off" aria-label="받은편지함 검색">
+        <button type="button" class="btn btn-secondary" id="olkFReset">필터 초기화</button>
+        <span class="hint" id="olkCount"></span>
+        <span class="hint">열 제목의 ▼로 엑셀처럼 거릅니다</span>
+      </div>
+      <div class="olk-wrap">
+        <div class="olk-left">
+          <div id="olkList" class="olk-list"></div>
+          <div id="olkWork" class="olk-work"><div class="muted">메일을 고르면 그 선박의 오더 검토·일정 확정·할 일이 여기 나옵니다.</div></div>
+        </div>
+        <div id="olkDetail" class="olk-detail"><div class="muted">메일을 고르면 그 메일 내용이 여기 나옵니다.</div></div>
+      </div>
+    </div>
+    <details id="ledRule" hidden>
+      <summary>Outlook 규칙 문구 만들기 (담당자 메일 분류)</summary>
+      <p class="muted" style="margin-top:0">위 "담당자로 보기"에서 고른 담당자의 선박명·PO 번호 목록을 만듭니다. Outlook 규칙("제목 또는 본문에 다음 단어 포함 → 폴더로 이동")에 붙여 넣으면 Outlook이 메일을 나눕니다. 이 도구는 메일을 읽지 않습니다.</p>
+      <div class="check"><input type="checkbox" id="ruleOpenOnly" checked><label for="ruleOpenOnly">끝난 건(수금완료 + 구품 반납) 제외</label></div>
+      <div class="check"><input type="checkbox" id="rulePo" checked><label for="rulePo">PO 번호도 넣기</label></div>
+      <div class="check"><input type="checkbox" id="ruleOwner"><label for="ruleOwner">고객사 이름도 넣기<span class="hint">같은 고객사의 다른 담당자 메일도 함께 분류될 수 있습니다</span></label></div>
+      <div id="ruleOut" aria-live="polite"></div>
+    </details>
+    <div class="view-switch" id="ledView" role="group" aria-label="보기 방식" hidden>
+      <button type="button" class="btn btn-secondary" data-view="list" aria-pressed="true">목록</button>
+      <button type="button" class="btn btn-secondary" data-view="board" aria-pressed="false">칸반 보드</button>
+    </div>
+    <div id="ledList"></div>
+  </section>
+
+  <!-- ===================== 입력 ===================== -->
+  <section class="card" aria-labelledby="in-title">
+    <h2 id="in-title">1. 오더 정보 입력</h2>
+    <p class="muted" style="margin-top:0">예시 버튼을 누르면 가짜 예시 데이터가 채워집니다. <span class="req">*</span> 표시는 필수 항목입니다.</p>
+    <div class="samples" role="group" aria-label="예시 불러오기">
+      <button type="button" class="btn btn-secondary" data-sample="valencia">예시: 발렌시아 (실비)</button>
+      <button type="button" class="btn btn-secondary" data-sample="busan">예시: 부산 (정액)</button>
+      <button type="button" class="btn btn-secondary" data-sample="houston">예시: 휴스턴 (미국)</button>
+    </div>
+
+    <form id="f" novalidate>
+      <fieldset>
+        <legend>기본 정보</legend>
+        <div class="field" data-f="vessel">
+          <label for="vessel">선박명 <span class="req" aria-hidden="true">*</span><span class="hint">예: MSC OOOO (M/V는 빼도 됩니다)</span></label>
+          <input id="vessel" name="vessel" type="text" required aria-required="true" aria-describedby="vessel-err" autocomplete="off">
+          <div class="err" id="vessel-err" role="alert">선박명을 입력해 주세요.</div>
+        </div>
+        <div class="row2">
+          <div class="field" data-f="port">
+            <label for="port">기항 항구 (작업지)<span class="hint">예: Valencia</span></label>
+            <input id="port" name="port" type="text" autocomplete="off">
+          </div>
+          <div class="field" data-f="country">
+            <label for="country">국가<span class="hint">예: Spain, Korea, USA</span></label>
+            <input id="country" name="country" type="text" autocomplete="off">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field" data-f="attend">
+            <label for="attend">승선 예정일</label>
+            <input id="attend" name="attend" type="date" aria-describedby="attend-err">
+            <div class="err" id="attend-err" role="alert">날짜 형식이 올바르지 않습니다.</div>
+          </div>
+          <div class="field" data-f="expiry">
+            <label for="expiry">센서 교정 만료일</label>
+            <input id="expiry" name="expiry" type="date" aria-describedby="expiry-err">
+            <div class="err" id="expiry-err" role="alert">날짜 형식이 올바르지 않습니다.</div>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field" data-f="po">
+            <label for="po">PO 번호<span class="hint">모르면 비워두세요 (TBA)</span></label>
+            <input id="po" name="po" type="text" autocomplete="off">
+          </div>
+          <div class="field" data-f="owner">
+            <label for="owner">선사 / 고객사</label>
+            <input id="owner" name="owner" type="text" value="MSC CYPRUS" autocomplete="off">
+          </div>
+        </div>
+        <div class="field" data-f="delivery">
+          <label for="delivery">사전 자재 배송지<span class="hint">작업지 전에 센서를 미리 싣는 경유지 (없으면 비워두세요)</span></label>
+          <input id="delivery" name="delivery" type="text" autocomplete="off">
+        </div>
+        <div class="field" data-f="remarks">
+          <label for="remarks">관리대장 N열 비고<span class="hint">케이블 길이 등</span></label>
+          <textarea id="remarks" name="remarks"></textarea>
+        </div>
+        <div class="check"><input id="ownerRequested" name="ownerRequested" type="checkbox"><label for="ownerRequested">선주가 이 기항지를 직접 요청함<span class="hint">미국 항구는 이 항목이 체크되어야 선주용 초안을 만듭니다</span></label></div>
+      </fieldset>
+
+      <details id="sec-cost" open>
+        <summary>실비 견적 (USD)</summary>
+        <p class="muted" style="margin-top:0">실비 청구 항구(정액 항구 외)의 견적 메일에 필요합니다. 정액 항구는 계약 금액만 쓰입니다.</p>
+        <div class="field" data-f="cContract"><label for="cContract">계약 공임 + 자재비</label><input id="cContract" name="cContract" type="number" min="0" step="0.01" inputmode="decimal" aria-describedby="cContract-err"><div class="err" id="cContract-err" role="alert">0 이상의 숫자를 입력해 주세요.</div></div>
+        <div class="field">
+          <span class="label" id="exp-label">실비 항목<span class="hint">항목명은 메일에 그대로 들어가므로 영문으로 입력하세요. 필요한 만큼 추가할 수 있고, 금액을 비운 항목은 메일에 넣지 않습니다.</span></span>
+          <div class="exp-row exp-head" aria-hidden="true"><span>항목명</span><span>금액</span><span></span></div>
+          <div id="expRows" role="group" aria-labelledby="exp-label"></div>
+          <button type="button" class="btn btn-secondary" id="addExp">+ 항목 추가</button>
+        </div>
+      </details>
+
+      <details id="sec-bill">
+        <summary>정산 정보</summary>
+        <div class="row2">
+          <div class="field" data-f="invAmount"><label for="invAmount">기본 서비스 금액 (USD)<span class="hint">Basic BWTS MRO Service — 계약 금액</span></label><input id="invAmount" name="invAmount" type="number" min="0" step="0.01" inputmode="decimal" aria-describedby="invAmount-err"><div class="err" id="invAmount-err" role="alert">0 이상의 숫자를 입력해 주세요.</div></div>
+          <div class="field" data-f="invNo"><label for="invNo">기본 서비스 인보이스 번호</label><input id="invNo" name="invNo" type="text" autocomplete="off"></div>
+          <div class="field" data-f="validPo"><label for="validPo">유효 PO 번호<span class="hint">비우면 기본 정보의 PO 번호</span></label><input id="validPo" name="validPo" type="text" autocomplete="off"></div>
+          <div class="field" data-f="cancelPo"><label for="cancelPo">취소된 기존 PO<span class="hint">크레딧 노트로 정리된 PO (없으면 비움)</span></label><input id="cancelPo" name="cancelPo" type="text" autocomplete="off"></div>
+          <div class="field" data-f="payDue"><label for="payDue">송금 기한<span class="hint">넣으면 서비스 중단(Credit Hold) 고지 포함</span></label><input id="payDue" name="payDue" type="date" aria-describedby="payDue-err"><div class="err" id="payDue-err" role="alert">날짜 형식이 올바르지 않습니다.</div></div>
+        </div>
+        <fieldset>
+          <legend>실비 발생 서비스 — [COST BREAKDOWN &amp; INVOICE]</legend>
+          <p class="muted" style="margin-top:0">정액 항구(부산·싱가포르 등)는 [INVOICE]로 나가고 아래 칸은 쓰지 않습니다. 실비는 매월 20일 이후 확정됩니다.</p>
+          <div class="row2">
+            <div class="field" data-f="travelMen"><label for="travelMen">추가 이동비 — 엔지니어 수</label><input id="travelMen" name="travelMen" type="number" min="0" step="1" inputmode="numeric" aria-describedby="travelMen-err"><div class="err" id="travelMen-err" role="alert">0 이상의 정수를 입력해 주세요.</div></div>
+            <div class="field" data-f="travelDays"><label for="travelDays">이동일 수</label><input id="travelDays" name="travelDays" type="number" min="0" step="1" inputmode="numeric" aria-describedby="travelDays-err"><div class="err" id="travelDays-err" role="alert">0 이상의 정수를 입력해 주세요.</div></div>
+            <div class="field" data-f="travelRate"><label for="travelRate">이동일 단가 (USD / 인·일)</label><input id="travelRate" name="travelRate" type="number" min="0" step="0.01" inputmode="decimal" value="750" aria-describedby="travelRate-err"><div class="err" id="travelRate-err" role="alert">0 이상의 숫자를 입력해 주세요.</div></div>
+            <div class="field" data-f="invNo2"><label for="invNo2">추가비용(이동비·실비) 인보이스 번호</label><input id="invNo2" name="invNo2" type="text" autocomplete="off"></div>
+          </div>
+          <div class="field" data-f="actualLines"><label for="actualLines">실비 내역 (영문, 한 줄에 "항목: 금액 USD")<span class="hint">예: Accommodation: 125.18 — 합계는 자동 계산</span></label><textarea id="actualLines" name="actualLines" aria-describedby="actualLines-err"></textarea><div class="err" id="actualLines-err" role="alert">"항목: 금액" 형식이 아닌 줄이 있습니다.</div></div>
+        </fieldset>
+        <div class="check"><input id="approved" name="approved" type="checkbox"><label for="approved">선주 구매팀이 결제 승인함 (Approved for payment)</label></div>
+        <div class="check"><input id="rma" name="rma" type="checkbox"><label for="rma">구품 센서 반납 조건 문구 넣기<span class="hint">신규 센서 비용을 당사가 부담하는 경우</span></label></div>
+      </details>
+
+      <details id="sec-done">
+        <summary>작업 완료 보고</summary>
+        <div class="field" data-f="workDate"><label for="workDate">작업일<span class="hint">비우면 승선 예정일을 씁니다</span></label><input id="workDate" name="workDate" type="date" aria-describedby="workDate-err"><div class="err" id="workDate-err" role="alert">날짜 형식이 올바르지 않습니다.</div></div>
+        <div class="ai-box" role="group" aria-labelledby="ai-title">
+          <div class="label" id="ai-title">서비스 리포트 AI 분석 (테스트 버전)</div>
+          <div class="banner lv-warning">
+            <strong>무료 등급 테스트용입니다.</strong> 리포트가 Google Gemini로 전송되며, 무료 등급에서는 보낸 내용이 Google 제품 개선에 쓰이고 검토자가 읽을 수 있습니다.
+            Google 약관은 무료 등급에 민감·기밀 정보를 보내지 말라고 안내합니다. 실제 고객 리포트는 유료 등급 전환과 회사 데이터 반출 정책 확인 후에 쓰세요.
+          </div>
+          <div class="field">
+            <label for="aiModel">AI 모델</label>
+            <select id="aiModel">
+              <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (가장 저렴)</option>
+              <option value="gemini-3.8-flash">Gemini 3.8 Flash (더 정확)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="aiKeyFile">API 키 파일<span class="hint">secrets 폴더의 gemini_api_key.txt를 고르세요. 키는 창을 닫으면 사라지고 저장되지 않습니다.</span></label>
+            <input id="aiKeyFile" type="file" accept=".txt,text/plain" aria-describedby="aiKeyStatus">
+            <div class="hint" id="aiKeyStatus" aria-live="polite">키를 아직 불러오지 않았습니다.</div>
+          </div>
+          <div class="field">
+            <label for="aiPdf">서비스 리포트 (PDF)<span class="hint">스캔본 PDF, 14MB 이하</span></label>
+            <input id="aiPdf" type="file" accept="application/pdf,.pdf" aria-describedby="aiPdfStatus">
+            <div class="hint" id="aiPdfStatus" aria-live="polite"></div>
+          </div>
+          <button type="button" class="btn btn-secondary" id="aiRun" disabled>리포트 분석해서 칸 채우기</button>
+          <div id="aiResult" aria-live="polite"></div>
+        </div>
+        <p class="muted">AI 분석을 쓰지 않으면 서비스 리포트(MRO SERVICE REPORT)를 보고 직접 입력하세요. 영문 메일에 그대로 들어가는 칸은 영문으로 씁니다.</p>
+        <div class="row2">
+          <div class="field" data-f="nUvi"><label for="nUvi">UV Intensity 센서 교체 수량</label><input id="nUvi" name="nUvi" type="number" min="0" step="1" inputmode="numeric" aria-describedby="nUvi-err"><div class="err" id="nUvi-err" role="alert">0 이상의 정수를 입력해 주세요.</div></div>
+          <div class="field" data-f="nTemp"><label for="nTemp">Temperature 센서 교체 수량</label><input id="nTemp" name="nTemp" type="number" min="0" step="1" inputmode="numeric" aria-describedby="nTemp-err"><div class="err" id="nTemp-err" role="alert">0 이상의 정수를 입력해 주세요.</div></div>
+          <div class="field" data-f="nPress"><label for="nPress">Pressure 센서 교체 수량</label><input id="nPress" name="nPress" type="number" min="0" step="1" inputmode="numeric" aria-describedby="nPress-err"><div class="err" id="nPress-err" role="alert">0 이상의 정수를 입력해 주세요.</div></div>
+          <div class="field" data-f="nFlow"><label for="nFlow">Flowmeter 확인 수량</label><input id="nFlow" name="nFlow" type="number" min="0" step="1" inputmode="numeric" aria-describedby="nFlow-err"><div class="err" id="nFlow-err" role="alert">0 이상의 정수를 입력해 주세요.</div></div>
+        </div>
+        <div class="check"><input id="sensorNotArrived" name="sensorNotArrived" type="checkbox"><label for="sensorNotArrived">신규 센서가 본선에 도착하지 않아 교체하지 못함<span class="hint">선원에게 교체 방법을 안내한 경우 — 메일에 "Sensor Replacement" 항목으로 들어갑니다</span></label></div>
+        <div class="field" data-f="opTest">
+          <label for="opTest">운전 시험</label>
+          <select id="opTest" name="opTest">
+            <option value="done">완료</option>
+            <option value="partial">일부만 완료</option>
+            <option value="notdone">못 함</option>
+          </select>
+        </div>
+        <div class="field" data-f="opNote"><label for="opNote">운전 시험 설명 (영문)<span class="hint">일부·못 함일 때 사유. 예: Operating test was carried out for No.1 BWTS only.</span></label><textarea id="opNote" name="opNote"></textarea></div>
+        <div class="check"><input id="crewTraining" name="crewTraining" type="checkbox" checked><label for="crewTraining">선원 교육 완료</label></div>
+        <div class="check"><input id="oldTaken" name="oldTaken" type="checkbox"><label for="oldTaken">구품 센서를 엔지니어가 회수함</label></div>
+        <div class="check"><input id="oldReturned" name="oldReturned" type="checkbox"><label for="oldReturned">교체한 구품 센서가 PANASIA에 도착함<span class="hint">관리대장 구품회수 "V". 체크하지 않으면 방선 후 30일부터 반납 요청 메일이 만들어집니다</span></label></div>
+        <div class="field" data-f="returnTo">
+          <label for="returnTo">구품 반납 요청 메일 받는 사람</label>
+          <select id="returnTo" name="returnTo">
+            <option value="owner">선주 (Superintendent)</option>
+            <option value="vessel">서비스를 진행한 본선 (Captain / Chief Engineer)</option>
+          </select>
+        </div>
+        <div class="field" data-f="dIssues"><label for="dIssues">미결 사항 Outstanding Issue (영문)<span class="hint">한 줄에 하나. 비우면 "No outstanding issue identified"</span></label><textarea id="dIssues" name="dIssues"></textarea></div>
+        <div class="field" data-f="dRequired"><label for="dRequired">필요 스페어 Required Spare (영문)<span class="hint">한 줄에 하나. 예: Main Buzzer: 1 EA</span></label><textarea id="dRequired" name="dRequired"></textarea></div>
+        <div class="field" data-f="dRecommended"><label for="dRecommended">권장 스페어 Recommended Spare (영문)<span class="hint">한 줄에 하나. 세트는 구성·수량까지 적기 (예: Capacitor Set: 1 SET (10 / 4.5 / 8 μF))</span></label><textarea id="dRecommended" name="dRecommended"></textarea></div>
+        <div class="field" data-f="dConsumed"><label for="dConsumed">사용한 엔지니어 스페어 Consumed Spare (영문)<span class="hint">한 줄에 하나. 예: Pressure Transmitter: 4 EA</span></label><textarea id="dConsumed" name="dConsumed"></textarea></div>
+        <div class="field" data-f="dRemarks"><label for="dRemarks">추가 비고 Additional Remarks (영문)<span class="hint">한 줄에 하나</span></label><textarea id="dRemarks" name="dRemarks"></textarea></div>
+      </details>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary">검토하기</button>
+        <button type="button" class="btn btn-secondary" id="btnClear">입력 지우기</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ===================== 결과 ===================== -->
+  <section aria-labelledby="out-title">
+    <div class="card">
+      <h2 id="out-title">2. 검토 결과</h2>
+      <div id="status" role="status" aria-live="polite"></div>
+      <div id="result">
+        <div class="state">왼쪽에 오더 정보를 입력하고 [검토하기]를 누르세요.<br>처음이면 예시 버튼을 눌러보세요.</div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>
+  초안은 사람이 확인한 뒤 발송합니다. 이 페이지는 입력값을 저장하지 않습니다 (창을 닫으면 사라짐). 외부로 보내는 것은 [리포트 분석해서 칸 채우기]를 누를 때의 리포트 PDF뿐입니다 (Google Gemini).
+</footer>
+
+<script>
+"use strict";
+/* =====================================================================
+   1. 규칙 설정값 (request.md 기준)
+   ===================================================================== */
+const RULES = {
+  preferredPorts: ["BUSAN", "SINGAPORE", "MASAN", "ULSAN"],
+  usPorts: ["HOUSTON", "NEW ORLEANS", "LOS ANGELES", "LONG BEACH", "NEW YORK", "SAVANNAH"],
+  usCountries: ["USA", "US", "UNITEDSTATES", "UNITEDSTATESOFAMERICA", "AMERICA", "미국"],
+  urgentDays: 7,          // 리드타임 경고
+  hubOnlyDays: 3,         // 2~3일 수준: 부산·싱가포르 외 투입 불가
+  cableLimitM: 10,        // 특수 케이블 기준
+  expiryContactDays: 120, // 120~91일: 만료일 알림 + 3개월 전 스케줄링 동의 요청 + 기항 계획·장기 스케줄 문의
+  expiryScheduleDays: 90, // 90~61일: 서비스 스케줄링 단계 (만료 3개월 전부터)
+  expiryDecideDays: 60,   // 60일 이하: 후보 스케줄이 여러 개면 어디로 갈지 정하는 단계
+  invoiceFromDay: 20,     // 매월 20일 이후 인보이스 발행
+  // 완료 보고에서 피해야 할 표현 (주관적 수식어·자의적 규정 문구)
+  bannedWords: [
+    { re: /\bsuccessful(ly)?\b/i, label: "successfully (주관적 표현)" },
+    { re: /\bperfect(ly)?\b|\bsmoothly\b|\bexcellent\b/i, label: "perfectly / smoothly / excellent (주관적 표현)" },
+    { re: /\bMEPC\b/i, label: "MEPC (규정 준수 단정)" },
+    { re: /\bVGP\b/i, label: "VGP (규정 준수 단정)" },
+    { re: /\bcompl(y|ied|ies|iance|iant)\b|준수/i, label: "comply / compliance / 준수 (규정 준수 단정)" },
+    { re: /extend(ed|s)?\s+(the\s+)?validity|validity\s+(is\s+|was\s+|has\s+been\s+)?extended|유효\s*기간\s*연장/i, label: "유효기간 연장 (자의적 규정 문구)" },
+    { re: /\bvalid\s+until\b/i, label: "valid until (교정 유효기간 문구 — 넣지 않기로 함)" },
+    { re: /\bspare\s+parts?\s+team\b/i, label: "Spare Parts Team (팀 이름은 'Spare Team')" },
+  ],
+};
+const TAGS = {
+  schedule: "[REQUEST FOR VESSEL SCHEDULE]",
+  estimate: "[ESTIMATED COST APPROVAL]",
+  attendance: "[ATTENDANCE CONFIRMATION]",
+  agentSchedule: "[ENGINEER AVAILABILITY]",
+  invoice: "[INVOICE]",                          // 정액 항구 (사용자 확인 2026-11-09)
+  invoiceCost: "[COST BREAKDOWN & INVOICE]",     // 실비 발생 서비스
+  reminder: "[FINAL PAYMENT REMINDER]",
+  completion: "[MRO COMPLETION]",
+  sensorReturn: "[SENSOR RETURN REQUEST]", // v7 — AI 제안, 변경 가능
+};
+const RETURN_AFTER_DAYS = 30; // 방선 후 30일부터 구품 반납 요청 (사용자 확인)
+// 관리대장 한글 항구·국가 → 영문 (v7, 일반 지명 사전 — 관리대장 값을 옮겨 적은 것이 아님). 없는 이름은 그대로 두고 검토 경고로 알림
+const KO_COUNTRY = {
+  "남아프리카": "South Africa", "튀르키에": "Turkey", "맥시코": "Mexico", "포르투칼": "Portugal", "싱가폴": "Singapore",
+  "한국": "Korea", "대한민국": "Korea", "중국": "China", "일본": "Japan", "싱가포르": "Singapore", "대만": "Taiwan", "홍콩": "Hong Kong",
+  "베트남": "Vietnam", "태국": "Thailand", "말레이시아": "Malaysia", "인도네시아": "Indonesia", "필리핀": "Philippines", "인도": "India",
+  "스리랑카": "Sri Lanka", "파키스탄": "Pakistan", "방글라데시": "Bangladesh", "미얀마": "Myanmar", "캄보디아": "Cambodia",
+  "아랍에미리트": "UAE", "UAE": "UAE", "사우디아라비아": "Saudi Arabia", "사우디": "Saudi Arabia", "오만": "Oman", "카타르": "Qatar",
+  "쿠웨이트": "Kuwait", "바레인": "Bahrain", "이란": "Iran", "이라크": "Iraq", "요르단": "Jordan", "이스라엘": "Israel",
+  "튀르키예": "Turkey", "터키": "Turkey", "이집트": "Egypt", "모로코": "Morocco", "알제리": "Algeria", "튀니지": "Tunisia", "리비아": "Libya",
+  "남아프리카공화국": "South Africa", "남아공": "South Africa", "나이지리아": "Nigeria", "케냐": "Kenya", "탄자니아": "Tanzania", "가나": "Ghana",
+  "토고": "Togo", "세네갈": "Senegal", "코트디부아르": "Cote d'Ivoire", "앙골라": "Angola", "모리셔스": "Mauritius", "지부티": "Djibouti",
+  "스페인": "Spain", "포르투갈": "Portugal", "프랑스": "France", "이탈리아": "Italy", "그리스": "Greece", "몰타": "Malta", "키프로스": "Cyprus",
+  "독일": "Germany", "네덜란드": "Netherlands", "벨기에": "Belgium", "영국": "United Kingdom", "아일랜드": "Ireland", "덴마크": "Denmark",
+  "노르웨이": "Norway", "스웨덴": "Sweden", "핀란드": "Finland", "폴란드": "Poland", "러시아": "Russia", "크로아티아": "Croatia",
+  "슬로베니아": "Slovenia", "루마니아": "Romania", "불가리아": "Bulgaria", "우크라이나": "Ukraine", "조지아": "Georgia", "라트비아": "Latvia",
+  "리투아니아": "Lithuania", "에스토니아": "Estonia", "미국": "USA", "캐나다": "Canada", "멕시코": "Mexico", "파나마": "Panama",
+  "콜롬비아": "Colombia", "브라질": "Brazil", "아르헨티나": "Argentina", "칠레": "Chile", "페루": "Peru", "에콰도르": "Ecuador",
+  "우루과이": "Uruguay", "자메이카": "Jamaica", "바하마": "Bahamas", "도미니카공화국": "Dominican Republic", "트리니다드토바고": "Trinidad and Tobago",
+  "호주": "Australia", "오스트레일리아": "Australia", "뉴질랜드": "New Zealand", "피지": "Fiji", "괌": "Guam",
+};
+const KO_PORT = {
+  // 지역·해역
+  "플로리다": "Florida", "텍사스": "Texas", "카리브해": "Caribbean Sea", "신트외스타티우스": "Sint Eustatius", "신투외스타티위스": "Sint Eustatius",
+  // 항구 — 한국
+  "부산": "Busan", "부산신항": "Busan New Port", "울산": "Ulsan", "마산": "Masan", "광양": "Gwangyang", "인천": "Incheon",
+  "평택": "Pyeongtaek", "여수": "Yeosu", "포항": "Pohang", "목포": "Mokpo", "거제": "Geoje", "진해": "Jinhae", "대산": "Daesan",
+  "군산": "Gunsan", "동해": "Donghae", "통영": "Tongyeong", "옥포": "Okpo", "온산": "Onsan", "삼척": "Samcheok",
+  // 항구 — 아시아 (표기 차이 포함)
+  "싱가폴": "Singapore", "바탐": "Batam", "파시르구당": "Pasir Gudang", "쿠안탄": "Kuantan", "라부안": "Labuan", "스리라차": "Sriracha",
+  "장인": "Jiangyin", "둥잉": "Dongying", "쉔젠": "Shenzhen", "셰코우": "Shekou", "셔코우": "Shekou", "얀톈": "Yantian", "바위취안": "Bayuquan",
+  "타이충": "Taichung", "텐진": "Tianjin", "차오저우": "Chaozhou", "둥관": "Dongguan", "전장": "Zhenjiang", "젠지앙": "Zhenjiang",
+  "웨이하이": "Weihai", "간위": "Ganyu", "주하이": "Zhuhai", "난퉁": "Nantong", "난통": "Nantong", "타이저우": "Taizhou", "란산": "Lanshan",
+  "후이저우": "Huizhou", "히로시마": "Hiroshima", "이와쿠니": "Iwakuni", "치바": "Chiba", "가와사키": "Kawasaki", "모지": "Moji",
+  "나카노세키": "Nakanoseki", "사카이센보쿠": "Sakai-Senboku", "키미츠": "Kimitsu", "이시노마키": "Ishinomaki", "소데가우라": "Sodegaura",
+  "기누우라": "Kinuura", "후쿠오카": "Fukuoka", "오이타": "Oita", "이치하라": "Ichihara", "사가노세키": "Saganoseki", "요카이치": "Yokkaichi",
+  "욧카이치": "Yokkaichi", "히비": "Hibi", "카시마": "Kashima", "미즈시마": "Mizushima", "사카이데": "Sakaide", "사카이데시": "Sakaide",
+  "수바": "Suva",
+  // 항구 — 아시아
+  "상하이": "Shanghai", "상해": "Shanghai", "양산": "Yangshan", "닝보": "Ningbo", "저우산": "Zhoushan", "주산": "Zhoushan", "칭다오": "Qingdao",
+  "청도": "Qingdao", "톈진": "Tianjin", "천진": "Tianjin", "신강": "Xingang", "다롄": "Dalian", "대련": "Dalian", "샤먼": "Xiamen",
+  "하문": "Xiamen", "선전": "Shenzhen", "심천": "Shenzhen", "옌톈": "Yantian", "서커우": "Shekou", "광저우": "Guangzhou", "난샤": "Nansha",
+  "롄윈강": "Lianyungang", "르자오": "Rizhao", "옌타이": "Yantai", "푸저우": "Fuzhou", "가오슝": "Kaohsiung", "카오슝": "Kaohsiung",
+  "지룽": "Keelung", "기륭": "Keelung", "타이중": "Taichung", "도쿄": "Tokyo", "요코하마": "Yokohama", "고베": "Kobe", "오사카": "Osaka",
+  "나고야": "Nagoya", "기타큐슈": "Kitakyushu", "하카타": "Hakata", "시미즈": "Shimizu", "호치민": "Ho Chi Minh", "까이멥": "Cai Mep",
+  "카이멥": "Cai Mep", "하이퐁": "Haiphong", "붕따우": "Vung Tau", "다낭": "Da Nang", "람차방": "Laem Chabang", "램차방": "Laem Chabang",
+  "방콕": "Bangkok", "포트클랑": "Port Klang", "클랑": "Port Klang", "탄중펠레파스": "Tanjung Pelepas", "페낭": "Penang",
+  "자카르타": "Jakarta", "수라바야": "Surabaya", "마닐라": "Manila", "콜롬보": "Colombo", "나바셰바": "Nhava Sheva", "나바쉐바": "Nhava Sheva",
+  "문드라": "Mundra", "첸나이": "Chennai", "뭄바이": "Mumbai", "코친": "Cochin", "카라치": "Karachi", "치타공": "Chittagong",
+  // 항구 — 중동·아프리카
+  "제벨알리": "Jebel Ali", "두바이": "Dubai", "아부다비": "Abu Dhabi", "칼리파": "Khalifa", "푸자이라": "Fujairah", "코르파칸": "Khor Fakkan",
+  "살랄라": "Salalah", "소하르": "Sohar", "담맘": "Dammam", "제다": "Jeddah", "하마드": "Hamad", "수에즈": "Suez", "포트사이드": "Port Said",
+  "알렉산드리아": "Alexandria", "다미에타": "Damietta", "탕헤르": "Tanger Med", "탕헤르메드": "Tanger Med", "더반": "Durban",
+  "케이프타운": "Cape Town", "몸바사": "Mombasa", "라고스": "Lagos", "테마": "Tema", "로메": "Lome", "다카르": "Dakar", "아비장": "Abidjan",
+  "루안다": "Luanda", "포트루이스": "Port Louis", "수하르": "Sohar", "뭄바사": "Mombasa", "다르에스살람": "Dar es Salaam",
+  "월비스베이": "Walvis Bay", "세우타": "Ceuta",
+  // 항구 — 유럽
+  "발렌시아": "Valencia", "알헤시라스": "Algeciras", "바르셀로나": "Barcelona", "라스팔마스": "Las Palmas", "시네스": "Sines", "리스본": "Lisbon",
+  "르아브르": "Le Havre", "마르세유": "Marseille", "포스": "Fos", "제노아": "Genoa", "제노바": "Genoa", "라스페치아": "La Spezia",
+  "조이아타우로": "Gioia Tauro", "트리에스테": "Trieste", "나폴리": "Naples", "살레르노": "Salerno", "리보르노": "Livorno", "피레우스": "Piraeus",
+  "마르사슐록": "Marsaxlokk", "리마솔": "Limassol", "함부르크": "Hamburg", "브레머하펜": "Bremerhaven", "빌헬름스하펜": "Wilhelmshaven",
+  "로테르담": "Rotterdam", "암스테르담": "Amsterdam", "앤트워프": "Antwerp", "안트베르펜": "Antwerp", "제브뤼헤": "Zeebrugge",
+  "펠릭스토우": "Felixstowe", "사우샘프턴": "Southampton", "사우스햄튼": "Southampton", "런던게이트웨이": "London Gateway", "리버풀": "Liverpool",
+  "그단스크": "Gdansk", "예테보리": "Gothenburg", "오르후스": "Aarhus", "상트페테르부르크": "St. Petersburg", "이스탄불": "Istanbul",
+  "암바를리": "Ambarli", "메르신": "Mersin", "이즈미트": "Izmit", "콘스탄차": "Constanta", "코페르": "Koper", "리예카": "Rijeka",
+  "트렐레보르": "Trelleborg", "세투발": "Setubal", "얄로바": "Yalova", "얄로와": "Yalova", "피레아스": "Piraeus", "투즐라": "Tuzla",
+  "르하브르": "Le Havre", "엠덴": "Emden", "테키르다": "Tekirdag", "테키르다으": "Tekirdag", "이스켄데룬": "Iskenderun", "이스켄더른": "Iskenderun",
+  "마샬슬록": "Marsaxlokk", "알렉산드로폴리스": "Alexandroupolis", "포리": "Pori", "벨파스트": "Belfast", "바일레": "Vejle", "팔디스키": "Paldiski",
+  "라팔리스": "La Pallice", "만갈리아": "Mangalia", "마르게라": "Marghera", "스히담": "Schiedam", "클라이페다": "Klaipeda", "사보나": "Savona",
+  "헨트": "Ghent", "겐트": "Ghent", "루앙": "Rouen", "테르뇌젠": "Terneuzen", "이스트햄": "Eastham",
+  // 항구 — 미주·오세아니아
+  "뉴욕": "New York", "뉴어크": "Newark", "사바나": "Savannah", "찰스턴": "Charleston", "노퍽": "Norfolk", "휴스턴": "Houston",
+  "뉴올리언스": "New Orleans", "마이애미": "Miami", "롱비치": "Long Beach", "로스앤젤레스": "Los Angeles", "엘에이": "Los Angeles",
+  "시애틀": "Seattle", "타코마": "Tacoma", "볼티모어": "Baltimore", "잭슨빌": "Jacksonville", "밴쿠버": "Vancouver", "프린스루퍼트": "Prince Rupert",
+  "몬트리올": "Montreal", "핼리팩스": "Halifax", "만사니요": "Manzanillo", "라사로카르데나스": "Lazaro Cardenas", "베라크루스": "Veracruz",
+  "베라크루즈": "Veracruz", "발보아": "Balboa", "콜론": "Colon", "크리스토발": "Cristobal", "카르타헤나": "Cartagena", "부에나벤투라": "Buenaventura",
+  "산투스": "Santos", "파라나과": "Paranagua", "리우데자네이루": "Rio de Janeiro", "이타자이": "Itajai", "나베간테스": "Navegantes",
+  "이타포아": "Itapoa", "부에노스아이레스": "Buenos Aires", "몬테비데오": "Montevideo", "산안토니오": "San Antonio", "발파라이소": "Valparaiso",
+  "카야오": "Callao", "과야킬": "Guayaquil", "킹스턴": "Kingston", "프리포트": "Freeport", "카우세도": "Caucedo",
+  "시드니": "Sydney", "멜버른": "Melbourne", "브리즈번": "Brisbane", "프리맨틀": "Fremantle",
+  "스톡턴": "Stockton", "새크라멘토": "Sacramento", "모빌": "Mobile", "발티모어": "Baltimore", "배턴루지": "Baton Rouge",
+  "포트에버글레이즈": "Port Everglades", "휴네미": "Port Hueneme", "산토스": "Santos", "만자닐로": "Manzanillo", "로드맨": "Rodman",
+  "베캉쿠르": "Becancour", "베껑꾸흐": "Becancour",
+};
+const KO_PLACE = Object.assign({}, KO_COUNTRY, KO_PORT);
+const COUNTRY_EN = new Set(Object.values(KO_COUNTRY));
+const hasHangul = s => /[가-힣]/.test(s || "");
+function toEnPlace(s) {
+  const look = w => { const k = w.replace(/\s*\(.*$/, "").replace(/\s+/g, ""); return KO_PLACE[k] || KO_PLACE[k.replace(/(신항|항구|항)$/, "")] || ""; };
+  const parts = String(s || "").split(/\s*[,/\n]\s*/).map(p => {
+    const t = p.trim(); if (!t || !hasHangul(t)) return t;
+    const hit = look(t); if (hit) return hit;
+    // "한국 부산"·"미국 휴스턴"처럼 띄어 쓴 경우: 모두 아는 이름이면 국가는 빼고 항구만
+    const words = t.replace(/\s*\(.*$/, "").split(/\s+/);
+    if (words.length > 1) { const m = words.map(look); if (m.every(Boolean)) { const ports = m.filter(x => !COUNTRY_EN.has(x)); return (ports.length ? ports : m).join(" "); } }
+    return t;
+  }).filter(Boolean);
+  // 항구와 국가가 한 칸에 섞여 있으면 항구만 (국가는 국가 칸에 따로 있음)
+  const ports = parts.filter(x => !COUNTRY_EN.has(x));
+  return (ports.length && ports.length < parts.length ? ports : parts).join(", ");
+}
+const isNoPo = v => { const s = String(v || "").trim(); return !s || /^(tba|tbd|tbc|미정|미등록|없음|n\/?a|-)$/i.test(s); };
+// 구품 반납 절차 — 사용자 제공 문안 (2026-11-09). 담당자 이름·전화번호는 개인정보라 빈칸으로 둠
+const RETURN_PROCEDURE = `■ BWTS MRO Sensor Return Procedure
+Replaced sensors (either the original ship sensor or the rental sensor) must be promptly returned to PANASIA in order to carry out calibration and the remaining MRO services in a timely manner.
+
+Once the sensor exchange is completed, pack the replaced sensors in the same box and hand them over to the designated shipping agent for shipment. For consignee details and shipping guidelines, please refer to the details below.
+
+It is strongly recommended to arrange landing and international shipment of the replaced sensors at the same port where the replacement took place, considering the vessel's long-term schedule. Failure to do so, and keeping the sensors onboard during voyages may result in significant delays in sensor restoration.
+
+Furthermore, although the timeline may vary depending on the contract, the dispatch deadline for returning the replaced sensors is clearly stated in the MRO service contract. An additional cost, typically USD 150 per day will be charged if the shipment is delayed due to the owner's negligence, unless unforeseen circumstances arise.
+
+Below are the guidelines and consignee information for the shipment:
+- Invoice Amount: Less than USD 100 (sensor unit price to be USD 10.00 each or less)
+- Packing List / Description: Ship Spares or Sensors
+- PIC / Delivered to: BWTS MRO Service ([PIC name])
+- Address: PANASIA CO., LTD. (Head Office), 55 Mieumsandan 3-ro, Gangseo-gu, Busan, Republic of Korea 46744
+- Office / Mobile Number: [office / mobile]
+- Email: mro@worldpanasia.com
+- Packing Detail: N/A
+
+■ Precautions Before Return
+- The invoice amount is recommended to be below USD 100 for faster customs clearance.
+- The quantity of replaced sensors must be thoroughly verified before disembarkation from the vessel.
+
+■ BWTS MRO Replaced Sensor List
+1. Pressure Transmitter
+2. Temperature Transmitter
+3. UV Intensity Sensor`;
+// 메일 초안에는 서명을 넣지 않음 (Outlook 서명 사용)
+// Work Order는 회사 시스템(CHS)에서 "[PANASIA] BWTS Service Job order for [선박명]" 제목으로 별도 발송됨
+const JOB_ORDER_SUBJECT = vessel => `[PANASIA] BWTS Service Job order for ${vessel}`;
+const BILLING_POLICY = "In accordance with our internal billing policy, service invoices can only be issued after the 20th of the month, as final actual expenses from our local service partner are consolidated on the 20th.";
+const RMA_CLAUSE = "The cost of supplying the new replacement sensor will be covered by PANASIA, on the condition that the old sensor is returned to PANASIA HQ once replaced onboard.";
+
+/* =====================================================================
+   2. 판정 로직 (화면과 분리된 순수 함수)
+   ===================================================================== */
+function parseDate(s) {
+  if (!s) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return undefined; // 형식 오류
+  const d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return isNaN(d) ? undefined : d;
+}
+function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+function daysBetween(from, to) { return Math.round((startOfDay(to) - startOfDay(from)) / 86400000); }
+function fmtDate(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+const EN_MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function fmtEnDate(d) { return `${d.getDate()} ${EN_MON[d.getMonth()]} ${d.getFullYear()}`; } // 예: 19 Jul 2026 (브라우저마다 "Sept" 등으로 달라지지 않게)
+// 실비 내역 "항목: 금액" 줄 읽기 (v7)
+function parseActual(text) {
+  const items = [], bad = [];
+  for (const line of String(text || "").split("\n").map(x => x.trim()).filter(Boolean)) {
+    const m = /^(.+?)\s*[:：\-–]?\s*(?:USD|US\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(?:USD)?$/i.exec(line);
+    if (m && m[1].trim()) items.push({ name: m[1].replace(/[:：\-–]\s*$/, "").trim(), amount: Number(m[2].replace(/,/g, "")) }); else bad.push(line);
+  }
+  return { items, bad, total: Math.round(items.reduce((s, x) => s + x.amount, 0) * 100) / 100 };
+}
+function money(n) { return "USD " + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function num(v) { return v === "" || v == null ? null : Number(v); }
+function cleanVessel(v) { return v.toUpperCase().replace(/^\s*M\s*[\/.]?\s*V\.?\s+/, "").trim(); }
+function normCountry(c) { return c.replace(/[\s.]/g, "").toUpperCase(); }
+
+function classifyPort(port, country) {
+  const p = port.trim().toUpperCase();
+  if (!p) return null;
+  if (RULES.preferredPorts.some(x => p === x || p.includes(x))) return "Preferred";
+  if (RULES.usPorts.includes(p) || RULES.usCountries.includes(normCountry(country))) return "Conditional";
+  return "Standard";
+}
+const TIER_KO = { Preferred: "정액 계약", Standard: "실비 청구", Conditional: "미주 조건부" };
+
+function cableLengths(text) {
+  const re = /(\d+(?:\.\d+)?)\s*(?:meters?|metres?|m)(?![a-z])/gi;
+  const out = []; let m;
+  while ((m = re.exec(text.toLowerCase()))) out.push(Number(m[1]));
+  return out;
+}
+
+function evaluate(inp, today) {
+  const v = {
+    vessel: cleanVessel(inp.vessel), owner: inp.owner.trim() || "MSC CYPRUS",
+    port: inp.port.trim(), country: inp.country.trim(), po: inp.po.trim() || "TBA",
+    delivery: inp.delivery.trim(), remarks: inp.remarks.trim(),
+  };
+  const tier = classifyPort(inp.port, inp.country);
+  const attend = parseDate(inp.attend), expiry = parseDate(inp.expiry);
+  const attendDays = attend ? daysBetween(today, attend) : null;
+  const expiryDays = expiry ? daysBetween(today, expiry) : null;
+  const checks = [];
+  if (hasHangul(v.port) || hasHangul(v.country))
+    checks.push({ lv: "warning", t: "영문 표기", input: `${v.port || "—"} / ${v.country || "—"}`, interp: "항구·국가에 한글이 있음 (영문 이름을 모르는 지명)", verdict: "영문 메일에 한글이 그대로 들어갑니다 — 보내기 전에 영문으로 고쳐 주세요" });
+
+  // 항구 등급
+  if (tier) {
+    const why = tier === "Preferred" ? "정액 항구 목록(부산·싱가포르·마산·울산)에 있음"
+      : tier === "Conditional" ? "미국 항구 또는 국가가 미국" : "정액·미국 항구 목록에 없음";
+    checks.push({ lv: "info", t: "항구 등급", input: `${v.port} / ${v.country || "국가 미입력"}`, interp: why, verdict: `${TIER_KO[tier]} (${tier})` });
+  } else {
+    checks.push({ lv: "inactive", t: "항구 등급", input: "항구 미입력", interp: "판정할 수 없음", verdict: "판정 보류" });
+  }
+
+  // 미주 할증 방어
+  if (tier === "Conditional") {
+    checks.push(inp.ownerRequested
+      ? { lv: "warning", t: "미주 할증 주의", input: `${v.port} / 선주 직접 요청: 예`, interp: "미국 통관(DDP·MAWB 등)과 할증 발생 가능", verdict: "진행 가능 — 비용 조건을 꼼꼼히 확인" }
+      : { lv: "error", t: "미주 할증 방어", input: `${v.port} / 선주 직접 요청: 아니오`, interp: "선주가 요청하지 않은 미국 항구", verdict: "선주용 초안·대리점 스케줄 조율 차단 (먼저 제안하지 않음)" });
+  }
+
+  // 리드타임
+  if (attend === undefined) {
+    checks.push({ lv: "error", t: "리드타임", input: inp.attend, interp: "날짜 형식 오류", verdict: "판정 불가" });
+  } else if (attend) {
+    const base = `${fmtDate(attend)} (기준일 ${fmtDate(today)})`;
+    if (attendDays < 0) checks.push({ lv: "error", t: "리드타임", input: base, interp: `${-attendDays}일 지남`, verdict: "지난 날짜 — 일정을 다시 확인" });
+    else if (attendDays <= RULES.hubOnlyDays && tier !== "Preferred") checks.push({ lv: "error", t: "리드타임 (초긴급)", input: base, interp: `D-${attendDays}`, verdict: "부산·싱가포르 외 엔지니어 투입·센서 수배 불가 — 다음 기항지 요청" });
+    else if (attendDays <= RULES.urgentDays) checks.push({ lv: "error", t: "리드타임 부족", input: base, interp: `D-${attendDays} (7일 이하)`, verdict: "긴급 — 항공·통관 준비를 위해 빠른 회신 요청" });
+    else checks.push({ lv: "success", t: "리드타임", input: base, interp: `D-${attendDays}`, verdict: "여유 있음" });
+  } else {
+    checks.push({ lv: "inactive", t: "리드타임", input: "승선일 미입력", interp: "판정할 수 없음", verdict: "판정 보류" });
+  }
+
+  // 특수 케이블
+  const lens = cableLengths(v.remarks);
+  const maxLen = lens.length ? Math.max(...lens) : null;
+  const flat = v.remarks.toLowerCase().replace(/\s/g, "");
+  const special = (maxLen !== null && maxLen > RULES.cableLimitM) || flat.includes("10m초과") || flat.includes(">10m");
+  if (v.remarks) {
+    checks.push(special
+      ? { lv: "warning", t: "특수 케이블", input: v.remarks, interp: maxLen !== null ? `감지된 길이: ${maxLen}m` : "'10m 초과' 표기 감지", verdict: "10m 초과 — 특수 자재 사전 준비" }
+      : { lv: "success", t: "특수 케이블", input: v.remarks, interp: maxLen !== null ? `감지된 길이: ${maxLen}m` : "길이 표기 없음", verdict: "해당 없음" });
+  }
+
+  // 센서 만료 단계
+  let expiryStage = null;
+  if (expiry === undefined) {
+    checks.push({ lv: "error", t: "센서 만료", input: inp.expiry, interp: "날짜 형식 오류", verdict: "판정 불가" });
+  } else if (expiry) {
+    const base = `${fmtDate(expiry)} (기준일 ${fmtDate(today)})`;
+    if (expiryDays <= 0) { expiryStage = "expired"; checks.push({ lv: "error", t: "센서 만료", input: base, interp: expiryDays === 0 ? "오늘 만료" : `${-expiryDays}일 지남`, verdict: "이미 만료 — 즉시 일정 확보" }); }
+    else if (expiryDays <= RULES.expiryDecideDays) { expiryStage = "decide"; checks.push({ lv: "warning", t: "센서 만료", input: base, interp: `만료까지 ${expiryDays}일 (60일 이하)`, verdict: "방향 잡기 — 후보 스케줄이 여러 개면 어디로 갈지 정하기" }); }
+    else if (expiryDays <= RULES.expiryScheduleDays) { expiryStage = "schedule"; checks.push({ lv: "info", t: "센서 만료", input: base, interp: `만료까지 ${expiryDays}일 (90~61일)`, verdict: "서비스 스케줄링 단계 — 선주에게 최신 스케줄 받아 방선 항구 제안" }); }
+    else if (expiryDays <= RULES.expiryContactDays) { expiryStage = "contact"; checks.push({ lv: "info", t: "센서 만료", input: base, interp: `만료까지 ${expiryDays}일 (120~91일)`, verdict: "선주 연락 시작 — 만료일 알림, 3개월 전 스케줄링 동의 요청, 기항 계획·장기 스케줄 문의" }); }
+    else { checks.push({ lv: "warning", t: "센서 만료", input: base, interp: `만료까지 ${expiryDays}일 (121일 이상)`, verdict: "아직 서비스 진행 시기가 아님 — 120일 이내가 되면 연락 시작" }); }
+  }
+
+  // 인보이스 발행일 (매월 20일)
+  const invoiceOpen = today.getDate() >= RULES.invoiceFromDay;
+  checks.push(invoiceOpen
+    ? { lv: "success", t: "인보이스 발행일", input: `기준일 ${fmtDate(today)}`, interp: `${today.getDate()}일 (20일 이후)`, verdict: "인보이스 발행 가능" }
+    : { lv: "info", t: "인보이스 발행일", input: `기준일 ${fmtDate(today)}`, interp: `${today.getDate()}일 (20일 이전)`, verdict: "정액 [INVOICE]는 바로 발송 가능, 실비 [COST BREAKDOWN & INVOICE]는 매월 20일 실비 확정 뒤 발송" });
+
+  // 완료 보고 표현 검사
+  const reportText = [inp.opNote, inp.dIssues, inp.dRequired, inp.dRecommended, inp.dConsumed, inp.dRemarks].join("\n");
+  const banned = RULES.bannedWords.filter(w => w.re.test(reportText)).map(w => w.label);
+  if (reportText.trim()) {
+    checks.push(banned.length
+      ? { lv: "warning", t: "완료 보고 표현", input: "완료 보고 입력 칸", interp: "발견: " + banned.join(", "), verdict: "팩트 중심 표현으로 고쳐 쓰기 (점검 내역·수치·교체 내역만)" }
+      : { lv: "success", t: "완료 보고 표현", input: "완료 보고 입력 칸", interp: "주관적 표현·규정 단정 문구 없음", verdict: "문제 없음" });
+  }
+
+  const items = (inp.expenses || [])
+    .filter(x => x.name.trim() && x.amount !== "")
+    .map(x => ({ name: x.name.trim(), amount: Number(x.amount) }));
+  const cost = { contract: num(inp.cContract), items };
+  cost.ready = cost.contract !== null && items.length > 0;
+  cost.total = cost.ready ? cost.contract + items.reduce((s, x) => s + x.amount, 0) : null;
+  return { v, inp, today, tier, attend, attendDays, expiry, expiryDays, expiryStage, special, maxLen, invoiceOpen, banned, cost, checks };
+}
+
+/* =====================================================================
+   3. 메일 초안 생성
+   ===================================================================== */
+function subject(tag, e, place) {
+  return `${tag} BWTS MRO | ${e.v.vessel} | ${place || e.v.port || "TBA"} | PO ${e.v.po} | ${e.v.owner}`;
+}
+function blocked(reason) { return { state: "blocked", reason }; }
+function needs(list) { return { state: "missing", reason: "입력 필요: " + list.join(", ") }; }
+function missing(e, keys) {
+  const names = { port: "기항 항구", country: "국가", attend: "승선 예정일", expiry: "센서 교정 만료일", cost: "계약 공임 + 자재비와 실비 항목 1개 이상", invAmount: "인보이스 금액", validPo: "유효 PO 번호", report: "센서 교체 수량 또는 '신규 센서 미도착' 체크", contract: "계약 공임 + 자재비" };
+  const i = e.inp;
+  const miss = keys.filter(k => {
+    if (k === "port") return !e.v.port;
+    if (k === "country") return !e.v.country;
+    if (k === "attend") return !e.attend;
+    if (k === "expiry") return !e.expiry;
+    if (k === "cost") return !e.cost.ready;
+    if (k === "contract") return e.cost.contract === null;
+    if (k === "invAmount") return num(i.invAmount) === null;
+    if (k === "validPo") return !i.validPo.trim();
+    if (k === "report") return !i.sensorNotArrived && ![i.nUvi, i.nTemp, i.nPress, i.nFlow].some(x => x !== "");
+    return false;
+  });
+  return miss.map(k => names[k]);
+}
+function extraNotices(e) {
+  const n = [];
+  if (e.v.delivery) n.push(`* Prior Delivery: The sensors will be delivered onboard in advance at ${e.v.delivery}, prior to the vessel's call at ${e.v.port}.`);
+  if (e.special) n.push("* Notice on Spares: Special cable length (>10m) has been noted and is being prepared in advance.");
+  if (e.attendDays !== null && e.attendDays >= 0 && e.attendDays <= RULES.urgentDays)
+    n.push("* Urgent Attendance Notice: Due to the short lead time (7 days or less), prompt confirmation is required to secure flight mobilization and customs clearance.");  return n.length ? "\n" + n.join("\n") + "\n" : "";
+}
+
+function draftOwner(e) {
+  const d = { key: "owner", title: "선주용 메일", checklist: ["수신자: 선주 기술·구매팀이 맞는지", "선박명·항구·승선일이 최신 ETA와 맞는지", "PO 번호 확인"] };
+  if (e.expiryDays !== null && e.expiryDays > RULES.expiryContactDays)
+    d.note = `센서 만료까지 ${e.expiryDays}일 남아 아직 서비스 진행 시기가 아닙니다. 선주가 요청한 경우에만 사용하세요.`;
+  const miss = missing(e, ["port", "country", "attend"]);
+  if (miss.length) return Object.assign(d, needs(miss));
+  if (e.tier === "Conditional" && !e.inp.ownerRequested) return Object.assign(d, blocked("선주가 직접 요청하지 않은 미국 항구는 먼저 제안하지 않습니다 (미주 할증 방어). 선주가 요청한 경우 '선주가 이 기항지를 직접 요청함'을 체크하세요."));
+  if (e.attendDays < 0) return Object.assign(d, blocked("승선 예정일이 이미 지났습니다. 날짜를 확인하세요."));
+  const date = fmtEnDate(e.attend);
+
+  if (e.attendDays <= RULES.hubOnlyDays && e.tier !== "Preferred") {
+    d.tag = TAGS.schedule; d.note = "승선일까지 3일 이하 — 부산·싱가포르 외에는 투입이 불가능하므로 다음 기항지를 요청하는 메일입니다.";
+    d.subject = subject(TAGS.schedule, e);
+    d.body = `Dear Technical & Purchasing Team,
+
+Good day.
+
+Thank you for your request for the BWTS MRO service onboard M/V ${e.v.vessel} at ${e.v.port}, ${e.v.country} on ${date}.
+
+As there are only ${e.attendDays} day(s) remaining until the vessel's call, it is physically not possible to mobilize our service engineer and prepare the sensors in time, except at our hub ports of Busan and Singapore. The standard lead time for sensor preparation is a minimum of two weeks.
+
+Could you kindly share the vessel's next port schedule so that we can arrange the attendance at a feasible port?`;
+    return Object.assign(d, { state: "ok" });
+  }
+
+  if (e.tier === "Preferred") {
+    d.tag = TAGS.attendance; d.checklist.push("정액 패키지(계약 금액) 조건이 맞는지");
+    d.subject = subject(TAGS.attendance, e);
+    d.body = `Dear Technical & Purchasing Team,
+
+Good day.
+
+We are pleased to confirm our service engineer's attendance for the BWTS MRO service onboard M/V ${e.v.vessel} during her upcoming call at ${e.v.port} on ${date}.
+
+Please find the service arrangement details below:
+- Vessel Name: M/V ${e.v.vessel}
+- Attendance Port: ${e.v.port}, ${e.v.country}
+- Scheduled Date: ${date}
+- Contracted Terms: Fixed Rate Package (PO Ref: ${e.v.po})
+${extraNotices(e)}
+Could you please kindly share the vessel's latest ETA/ETD alongside the local agent contact details to ensure smooth gate clearance and boarding formalities?`;
+    return Object.assign(d, { state: "ok" });
+  }
+
+  const cm = missing(e, ["cost"]);
+  if (cm.length) return Object.assign(d, needs(cm));
+  const c = e.cost, total = c.total;
+  const itemLines = c.items.map(x => `- ${x.name}: ${money(x.amount)}`).join("\n");
+  d.tag = TAGS.estimate; d.checklist.push("견적 항목명·금액과 합계 확인");
+  if (e.tier === "Conditional") d.checklist.push("미국 통관·할증 조건을 따로 확인했는지");
+  d.subject = subject(TAGS.estimate, e);
+  d.body = `Dear Technical & Purchasing Team,
+
+Good day.
+
+Further to the service coordination for M/V ${e.v.vessel}, we would like to arrange our service engineer's attendance during her call at ${e.v.port}, ${e.v.country} on ${date}.
+
+Please kindly review the estimated attendance expenses below and confirm whether we may proceed with the travel arrangements:
+
+[Estimated Expense Breakdown]
+- Contracted Service & Spares: ${money(c.contract)}
+${itemLines}
+--------------------------------------------------
+Total Estimated Cost: ${money(total)}
+
+* Important Disclaimers:
+1. Meals and local transportation between hotel and vessel will be invoiced separately based on actual receipts.
+2. Waiting day charges resulting from unmonitored schedule changes or berthing delays will be subject to additional billing.
+${extraNotices(e)}
+Please kindly advise if we may proceed with the attendance and issue the formal work order.`;
+  d.total = total;
+  return Object.assign(d, { state: "ok" });
+}
+
+function draftSchedule(e) {
+  const d = { key: "schedule", title: "장기 스케줄 요청", checklist: ["수신자: 선주 기술감독(Superintendent)", "센서 교정 만료일이 맞는지"] };
+  const miss = missing(e, ["expiry"]);
+  if (miss.length) return Object.assign(d, needs(miss));
+  if (!e.expiryStage) return Object.assign(d, { state: "na", reason: `만료까지 ${e.expiryDays}일 남았습니다. 120일 이내가 되면 이 초안이 만들어집니다.` });
+  const exp = fmtEnDate(e.expiry);
+  const from = new Date(e.expiry); from.setDate(from.getDate() - RULES.expiryScheduleDays);
+  const ASK = {
+    // 120~91일: 만료일 알림 + 3개월 전 스케줄링 동의 + 부산·싱가포르/아시아·유럽 계획 + 장기 스케줄
+    contact: `Please be advised that the calibration of the BWTS sensors onboard is due on ${exp}.
+
+With your consent, we would like to start scheduling the calibration service from three months prior to the due date (i.e. from ${fmtEnDate(from)}).
+
+For our planning, could you kindly advise whether the vessel has any upcoming calls at Busan or Singapore, or any plans to trade in Asia or Europe? If available, we would also appreciate it if you could share the vessel's long-term schedule.`,
+    // 90~61일: 서비스 스케줄링
+    schedule: `As the calibration of the BWTS sensors onboard is due on ${exp}, we would now like to arrange the calibration service.
+
+Could you kindly share the vessel's latest schedule for the coming months, so that we can propose a suitable attendance port (preferably Busan or Singapore, or a main port in Asia or Europe)?`,
+    // 60일 이하: 후보 스케줄 중 어디로 갈지 결정
+    decide: `As the calibration of the BWTS sensors onboard is due on ${exp}, we need to decide on the attendance port to secure sensor preparation (minimum two weeks) and engineer mobilization.
+
+Could you kindly share the vessel's latest port rotation, and advise which of the upcoming calls would be most suitable for the attendance?`,
+    expired: `Please be advised that the calibration of the BWTS sensors onboard was due on ${exp}.
+
+Kindly share the vessel's upcoming schedule at your earliest convenience so that we can arrange the calibration service as soon as possible.`,
+  };
+  const ask = ASK[e.expiryStage];
+  if (e.expiryStage === "contact") d.checklist.push("스케줄링 시작일(만료 3개월 전) 날짜 확인");
+  d.tag = TAGS.schedule;
+  d.subject = subject(TAGS.schedule, e, e.v.port || "TBA");
+  d.body = `Dear Mr. Superintendent,
+
+Good day.
+
+We are writing regarding the annual BWTS sensor calibration (MRO) service for M/V ${e.v.vessel}.
+
+${ask}
+
+Thank you for your cooperation.`;
+  return Object.assign(d, { state: "ok" });
+}
+
+function draftAgentSchedule(e) {
+  // 수신자: 우리 회사 서비스 대리점(엔지니어 파견 파트너) — 선박 현지 대리점 아님. 가벼운 가능 여부 문의
+  const d = { key: "agent", title: "대리점 스케줄 조율", checklist: [
+    "수신자: 우리 서비스 대리점(엔지니어 파견 파트너)이 맞는지",
+    "항구·날짜가 선주와 이야기 중인 일정과 같은지",
+    `엔지니어 가능 회신을 받은 뒤 CHS에서 Work Order 발송 → 메일함에 "${JOB_ORDER_SUBJECT(e.v.vessel)}" 수신 확인`] };
+  const miss = missing(e, ["port", "attend"]);
+  if (miss.length) return Object.assign(d, needs(miss));
+  if (e.tier === "Conditional" && !e.inp.ownerRequested) return Object.assign(d, blocked("선주가 요청하지 않은 미국 항구입니다. 선주 확인 전에는 대리점에 엔지니어 가능 여부를 묻지 않습니다."));
+  if (e.attendDays < 0) return Object.assign(d, blocked("승선 예정일이 이미 지났습니다. 날짜를 확인하세요."));
+  d.tag = TAGS.agentSchedule;
+  d.subject = subject(TAGS.agentSchedule, e);
+  d.body = `Dear Partner,
+
+Good day.
+
+We have a BWTS MRO service request as below. Could you kindly check whether your service engineer would be available on this schedule?
+
+- Vessel Name: M/V ${e.v.vessel}
+- Port: ${e.v.port}${e.v.country ? ", " + e.v.country : ""}
+- Planned Attendance Date: ${fmtEnDate(e.attend)}
+
+The schedule is still tentative and subject to the vessel's final ETA. We will share the formal job order once confirmed.
+
+Thank you.`;
+  return Object.assign(d, { state: "ok" });
+}
+
+function draftBilling(e) {
+  const i = e.inp, list = [];
+  const amount = num(i.invAmount), validPo = i.validPo.trim() || e.v.po;
+  const placeSubj = (tag) => subject(tag, Object.assign({}, e, { v: Object.assign({}, e.v, { po: validPo }) }));
+  const rma = i.rma ? `\n${RMA_CLAUSE}\n` : "";
+  const actual = parseActual(i.actualLines);
+  const men = num(i.travelMen) || 0, tdays = num(i.travelDays) || 0, rate = num(i.travelRate) || 0;
+  const travel = Math.round(men * tdays * rate * 100) / 100;
+  const extra = Math.round((travel + actual.total) * 100) / 100;
+  const total = Math.round(((amount || 0) + extra) * 100) / 100;
+  const anyBilling = i.invAmount !== "" || i.validPo.trim() || i.cancelPo.trim() || i.payDue || i.approved || i.rma || i.invNo.trim() || actual.items.length || travel > 0;
+  if (!anyBilling) return [{ key: "invoice", title: "정산 메일", state: "na", reason: "왼쪽 '정산 정보'를 입력하면 정산 메일 초안이 만들어집니다.", checklist: [] }];
+
+  // 인보이스 (v7 — 과거 발송 메일 양식): 정액 항구 = [INVOICE], 실비 발생 = [COST BREAKDOWN & INVOICE]
+  const fixed = e.tier === "Preferred";
+  const tag = fixed ? TAGS.invoice : TAGS.invoiceCost;
+  const inv = { key: "invoice", title: fixed ? "인보이스 [INVOICE] — 정액" : "인보이스 [COST BREAKDOWN & INVOICE] — 실비", tag,
+    checklist: ["받는 사람 이름([name]) 채우기", "금액·인보이스 번호·PO(계약) 번호가 첨부 인보이스와 같은지"] };
+  // 인보이스에는 센서 미도착 관련 문구를 넣지 않음 (사용자 결정 2026-11-10) — 완료 보고에만 Sensor Replacement로 표시
+  const sna = "";
+  const workDate = parseDate(i.workDate) || e.attend;
+  const miss = missing(e, ["invAmount"]);
+  if (!workDate) miss.push("작업일 또는 승선 예정일");
+  if (!fixed && extra <= 0) miss.push("추가 이동비 또는 실비 내역 (실비 발생 서비스)");
+  if (actual.bad.length) miss.push(`실비 내역 형식 (${actual.bad.length}줄)`);
+  if (isNoPo(validPo)) Object.assign(inv, blocked("PO 미등록 — 인보이스 Hold. Pre-proceeding 건은 선주 PO가 등록된 뒤 발행하세요. (유효 PO 번호 또는 기본 정보의 PO 번호를 확인)"));
+  else if (miss.length) Object.assign(inv, needs(miss));
+  else {
+    const V = e.v.vessel, line = "===============================================";
+    const invNo = i.invNo.trim() || "[invoice no.]";
+    inv.subject = placeSubj(tag);
+    if (fixed) {
+      inv.checklist.push("인보이스 1장 첨부");
+      inv.body = `Dear [name],
+
+Good day.
+
+The BWTS MRO service for ${V} was carried out on ${fmtEnDate(workDate)}.
+
+Please find attached the invoice for your review and payment processing.
+
+${sna}${line}
+
+● VESSEL: ${V}
+
+● CONTRACT NO.: ${validPo}
+
+● BASIC BWTS MRO SERVICE: ${money(amount)}
+
+● TOTAL INVOICED AMOUNT: ${money(amount)}
+
+${line}
+
+Attachment:
+
+1) BWTS MRO Service Invoice
+   - Invoice No.: ${invNo}
+   - Amount: ${money(amount)}
+${rma}
+We would appreciate it if you could review the attached invoice and confirm that the details are in order.
+
+Kindly also advise the expected payment schedule at your earliest convenience.
+
+If you have any questions or require any further supporting documents, please feel free to contact us without hesitation.
+
+Your kind attention and cooperation would be highly appreciated.`;
+    } else {
+      if (!e.invoiceOpen) inv.note = `오늘은 ${e.today.getDate()}일입니다 — 실비는 매월 20일 이후에 확정되므로, 실비가 확정된 뒤에 보내세요.`;
+      inv.checklist.push("인보이스 2장(기본 / 추가 이동비·실비)과 Cost Breakdown·영수증 첨부", "실비 금액이 영수증·Cost Breakdown과 같은지");
+      const parts = [], what = [];
+      parts.push(`● BASIC BWTS MRO SERVICE: ${money(amount)}`);
+      if (travel > 0) { parts.push(`● ADDITIONAL TRAVEL CHARGE: ${money(travel)}\n  (${men} engineer${men > 1 ? "s" : ""} × ${tdays} travel day${tdays > 1 ? "s" : ""} × ${money(rate)})`); what.push("additional travel charge"); }
+      if (actual.total > 0) { parts.push(`● ACTUAL EXPENSES: ${money(actual.total)}\n${actual.items.map(x => `  - ${x.name}: ${money(x.amount)}`).join("\n")}`); what.push("actual expenses"); }
+      parts.push(`● TOTAL INVOICED AMOUNT: ${money(total)}`);
+      const extraName = travel > 0 && actual.total > 0 ? "Additional Travel and Actual Cost Invoice" : travel > 0 ? "Additional Travel Charge Invoice" : "Actual Cost Invoice";
+      inv.body = `Dear [name],
+
+Good day.
+
+The BWTS MRO service for ${V} was carried out on ${fmtEnDate(workDate)}.
+
+Please find attached the invoices and cost breakdown for your review, confirmation, and payment processing.
+
+${sna}${line}
+
+● VESSEL: ${V}
+
+● CONTRACT NO.: ${validPo}
+
+${parts.join("\n\n")}
+
+${line}
+
+Attachments:
+
+1) Basic BWTS MRO Service Invoice
+   - Invoice No.: ${invNo}
+   - Amount: ${money(amount)}
+
+2) ${extraName}
+   - Invoice No.: ${i.invNo2.trim() || "[invoice no.]"}
+   - Amount: ${money(extra)}
+
+3) Cost Breakdown and Supporting Receipts
+${rma}
+We would appreciate it if you could review and confirm your acceptance of the ${what.join(" and ")} stated above.
+
+Kindly also advise the expected payment schedule for the attached invoices at your earliest convenience.
+
+If you have any questions or require further supporting documents, please feel free to contact us without hesitation.
+
+Your kind attention and cooperation would be highly appreciated.`;
+    }
+    inv.state = "ok"; inv.total = fixed ? amount : total;
+    if (!i.invNo.trim() || (!fixed && !i.invNo2.trim())) inv.checklist.push("[invoice no.] 빈칸 채우기");
+  }
+  list.push(inv);
+
+  // 결제 독촉 / PO 정리 (해당 정보가 있을 때만)
+  if (i.cancelPo.trim() || i.approved || i.payDue) {
+    const rem = { key: "reminder", title: "결제 독촉 · PO 정리", checklist: ["유효 PO·금액이 회계팀 자료와 맞는지", "송금 기한 날짜 확인"] };
+    const miss = missing(e, ["invAmount", "validPo"]);
+    const due = parseDate(i.payDue);
+    if (miss.length) Object.assign(rem, needs(miss));
+    else {
+      const facts = [];
+      if (i.cancelPo.trim()) facts.push(`The cancelled PO ${i.cancelPo.trim()} has been closed by the issuance of a credit note.`);
+      facts.push(`The only valid document for settlement is PO ${validPo} and the corresponding invoice${!fixed && extra > 0 ? "s" : ""} of ${money(fixed ? amount : total)} in total.`);
+      facts.push(i.approved ? "As your purchasing team has already approved this invoice for payment, kindly confirm the remittance date." : "Kindly confirm the remittance date.");
+      const hold = due ? `\nShould the payment not be received by ${fmtEnDate(due)}, we will have no choice but to place all service and technical support for your fleet on hold.\n` : "";
+      rem.tag = TAGS.reminder;
+      rem.subject = placeSubj(TAGS.reminder);
+      rem.body = `Dear Accounting Team,
+
+Good day.
+
+Regarding the outstanding payment for the BWTS MRO service onboard M/V ${e.v.vessel}, please note the following:
+
+${facts.map((f, k) => `${k + 1}. ${f}`).join("\n")}
+${hold}`;
+      rem.state = "ok";
+      if (due) rem.checklist.push("서비스 중단(Credit Hold) 고지를 보내도 되는지");
+    }
+    list.push(rem);
+  }
+  return list;
+}
+
+function draftCompletion(e) {
+  const i = e.inp;
+  // 템플릿: 기존 ChatGPT 업무 대화의 [MRO COMPLETION] 메일 56건과 사용자 수정 요청에서 정리
+  const d = { key: "completion", title: "작업 완료 보고", checklist: [
+    "센서 교체 수량·스페어 수량이 서비스 리포트와 일치하는지",
+    "서명된 MRO Service Report와 Sensor Calibration Report 첨부",
+    "Contact Information의 [name / email] 칸 채우기",
+    "주관적 표현·규정 단정 문구가 없는지"] };
+  if (i.aiFilled) d.checklist.unshift("AI가 채운 값(수량·스페어·운전 시험)을 서비스 리포트 원본과 대조했는지");
+  const workDate = parseDate(i.workDate) || e.attend;
+  const miss = missing(e, ["port", "report"]);
+  if (!workDate) miss.push("작업일 또는 승선 예정일");
+  if (miss.length) return Object.assign(d, needs(miss));
+
+  const lines = t => (t || "").split("\n").map(x => x.replace(/^\s*[-*•]\s*/, "").trim()).filter(Boolean);
+  const bullets = arr => arr.map(x => "- " + x).join("\n");
+  const cnt = v => (v === "" || v == null ? 0 : Math.max(0, Math.floor(Number(v))));
+  const sensors = [["UV Intensity Sensor", cnt(i.nUvi)], ["Temperature Sensor", cnt(i.nTemp)], ["Pressure Sensor", cnt(i.nPress)]].filter(x => x[1] > 0);
+  const flow = cnt(i.nFlow);
+  const op = i.opTest || "done";
+  const place = e.v.port + (e.v.country ? ", " + e.v.country : "");
+
+  const acts = [];
+  if (!i.sensorNotArrived && sensors.length) acts.push("sensor calibration/replacement");
+  acts.push("BWTS condition inspection");
+  if (op !== "notdone") acts.push("operating test");
+  if (i.crewTraining) acts.push("crew training");
+  const actText = acts.length > 2 ? acts.slice(0, -1).join(", ") + ", and " + acts[acts.length - 1]
+    : acts.join(" and ");
+
+  const work = [];
+  if (!i.sensorNotArrived) sensors.forEach(([n, c]) => work.push(`${n}: ${c} EA replaced`));
+  if (flow) work.push(`Flowmeter: ${flow} EA verified`);
+  work.push("Filter Unit, UV Unit, EHS Valve, Control Panel, and UV Power Supply Panel inspected");
+  if (op === "done") work.push("BWTS operating test completed");
+  if (op === "partial") work.push("BWTS operating test partially completed");
+  if (i.crewTraining) work.push("Crew training completed");
+
+  const sections = [];
+  let workSec = bullets(work);
+  if (op === "done" && i.opNote.trim()) workSec += "\n\n" + i.opNote.trim();
+  sections.push(["Work Completed", workSec]);
+  if (op !== "done") sections.push(["Operating Test", i.opNote.trim() || (op === "notdone"
+    ? "The BWTS operating test could not be completed during the attendance."
+    : "The BWTS operating test was partially completed during the attendance.")]);
+  if (i.sensorNotArrived) {
+    sections.push(["Sensor Replacement", "The following new calibrated sensors had not yet been delivered onboard at the time of attendance:\n"
+      + (sensors.length ? bullets(sensors.map(([n, c]) => `${n}: ${c} EA`)) : "- New calibrated sensors")
+      + "\n\nTherefore, the sensors were not replaced by the attending engineer.\nThe vessel crew was instructed on how to replace the sensors once they are delivered onboard."]);
+    d.checklist.push("센서 미도착 건 — 정산은 공임·출장비만 (리포트상 비정품·센서 없음일 때만 센서값 청구, '센서 미도착일 때 정산'에서 선택)");
+  }
+  const issues = lines(i.dIssues), req = lines(i.dRequired), rec = lines(i.dRecommended);
+  if (!issues.length && !req.length && !rec.length) {
+    sections.push(["Outstanding / Required Spare", "- No outstanding issue identified\n- No required spare identified\n- No recommended spare identified"]);
+  } else {
+    sections.push([issues.length > 1 ? "Outstanding Issues" : "Outstanding Issue", issues.length ? bullets(issues) : "- No outstanding issue identified"]);
+    if (req.length) sections.push(["Required Spares", bullets(req)]);
+    if (rec.length) sections.push(["Recommended Spares", bullets(rec)]);
+  }
+  const consumed = lines(i.dConsumed), remarks = [];
+  if (consumed.length) remarks.push("Engineer spare parts were used during the service as follows:\n" + consumed.map(x => "  - " + x).join("\n"));
+  // 센서를 교체하지 못한 경우에는 구품 회수 문구를 넣지 않음 (내용이 서로 맞지 않음)
+  if (i.oldTaken && !i.sensorNotArrived) remarks.push("The removed old sensors were taken ashore by the attending engineer.");
+  lines(i.dRemarks).forEach(x => remarks.push(x));
+  if (remarks.length) sections.push(["Additional Remarks", remarks.map(x => "- " + x).join("\n")]);
+
+  d.tag = TAGS.completion;
+  if (e.banned.length) d.note = "입력한 내용에 피해야 할 표현이 있습니다: " + e.banned.join(", ") + " — 보내기 전에 고쳐 쓰세요.";
+  d.subject = subject(TAGS.completion, e);
+  d.body = `Dear Superintendents / Technical Team,
+
+Good day.
+
+We would like to inform you that the scheduled BWTS MRO service for M/V ${e.v.vessel} was carried out at ${place} on ${fmtEnDate(workDate)}.
+
+During the service, ${actText} were ${op === "done" ? "completed" : "carried out"}.
+
+${sections.map(([h, b], k) => `${k + 1}. ${h}\n${b}`).join("\n\n")}
+
+Please find attached the signed MRO Service Report and Sensor Calibration Report for your reference.
+
+For any future technical support or service attendance, please contact our Marine Service Team.
+For spare inquiries or quotations, please contact our Spare Team.
+
+■ Contact Information
+A/S & Technical Support: Marine Service Team — [name / email]
+Spare: Spare Team — [name / email]
+
+■ Customer Satisfaction Survey
+To help us improve our service quality, please kindly scan the QR code in the attached service report and share your feedback.`;
+  return Object.assign(d, { state: "ok", warn: e.banned.length > 0 });
+}
+
+// 구품 반납 요청 (v7) — 방선 후 30일부터, 구품이 PANASIA에 도착하지 않았을 때
+function draftReturn(e) {
+  const i = e.inp;
+  const d = { key: "sensorReturn", title: "구품 센서 반납 요청 (D+30)", checklist: [
+    "받는 사람 확인 — 선주 또는 서비스를 진행한 본선",
+    "관리대장 구품회수 칸을 다시 확인 (그사이 도착했는지)",
+    "[PIC name]·[office / mobile] 빈칸 채우기"] };
+  const workDate = parseDate(i.workDate) || e.attend;
+  if (!workDate) return Object.assign(d, needs(["작업일 또는 승선 예정일"]));
+  if (i.oldReturned) return Object.assign(d, { state: "na", reason: "구품 센서가 이미 PANASIA에 도착했습니다." });
+  if (i.oldTaken) return Object.assign(d, { state: "na", reason: "엔지니어가 구품 센서를 회수해 본선에 반납할 센서가 없습니다." });
+  if (i.sensorNotArrived) return Object.assign(d, { state: "na", reason: "신규 센서가 도착하지 않아 교체하지 않았습니다 — 반납할 구품이 없습니다." });
+  const since = daysBetween(workDate, e.today);
+  if (since < RETURN_AFTER_DAYS) {
+    const from = new Date(workDate); from.setDate(from.getDate() + RETURN_AFTER_DAYS);
+    return Object.assign(d, { state: "na", reason: since < 0 ? "아직 방선 전입니다." : `방선 후 ${since}일 — ${fmtDate(from)}(D+${RETURN_AFTER_DAYS})부터 만들어집니다.` });
+  }
+  const place = e.v.port + (e.v.country ? ", " + e.v.country : "");
+  d.tag = TAGS.sensorReturn;
+  d.subject = subject(TAGS.sensorReturn, e);
+  d.note = `방선 후 ${since}일 (D+${since}) — 구품이 아직 도착하지 않은 것으로 입력되어 있습니다.`;
+  d.body = `${i.returnTo === "vessel" ? "Dear Captain / Chief Engineer," : "Dear Superintendent,"}
+
+Good day.
+
+This is a kind reminder regarding the replaced BWTS sensors from the MRO service onboard M/V ${e.v.vessel}${e.v.port ? ` at ${place}` : ""} on ${fmtEnDate(workDate)}.
+
+As of today, ${since} days have passed since the service, and the replaced sensors have not yet been received at PANASIA. Kindly arrange the return of the replaced sensors in accordance with the procedure below, and share the shipping details (forwarder and AWB / tracking number) once dispatched.
+
+${RETURN_PROCEDURE}
+
+Thank you for your cooperation.`;
+  return Object.assign(d, { state: "ok" });
+}
+
+function buildDrafts(e) {
+  return [
+    { tab: "선주용", items: [draftOwner(e)] },
+    { tab: "장기 스케줄 요청", items: [draftSchedule(e)] },
+    { tab: "대리점 스케줄 조율", items: [draftAgentSchedule(e)] },
+    { tab: "정산", items: draftBilling(e) },
+    { tab: "완료 보고", items: [draftCompletion(e)] },
+    { tab: "구품 반납", items: [draftReturn(e)] },
+  ];
+}
+
+/* =====================================================================
+   4. 화면 처리 (사용자 입력은 textContent로만 표시 — XSS 방지)
+   ===================================================================== */
+const form = document.getElementById("f");
+const resultEl = document.getElementById("result");
+const statusEl = document.getElementById("status");
+
+function el(tag, attrs, ...children) {
+  const n = document.createElement(tag);
+  for (const [k, val] of Object.entries(attrs || {})) {
+    if (k === "class") n.className = val;
+    else if (k === "text") n.textContent = val;
+    else n.setAttribute(k, val);
+  }
+  for (const c of children) if (c != null) n.append(c);
+  return n;
+}
+function dot(lv) { return el("span", { class: "dot lv-" + lv, "aria-hidden": "true" }); }
+const LV_KO = { error: "위험", warning: "주의", info: "정보", success: "정상", inactive: "보류" };
+
+function readForm() {
+  const o = {};
+  for (const x of form.elements) {
+    if (!x.name) continue;
+    o[x.name] = x.type === "checkbox" ? x.checked : x.value;
+  }
+  o.aiFilled = aiState.filled;
+  o.expenses = [...expRowsEl.querySelectorAll(".exp-row")].map(r => ({
+    name: r.querySelector(".exp-name").value, amount: r.querySelector(".exp-amt").value }));
+  return o;
+}
+
+/* 실비 항목: 직접 추가·삭제 */
+const expRowsEl = document.getElementById("expRows");
+const DEFAULT_EXPENSES = [
+  { name: "Flight / Transportation", amount: "" },
+  { name: "Hotel Accommodation", amount: "" },
+  { name: "Travel Labor Fee", amount: "" },
+];
+let expSeq = 0;
+function addExpenseRow(item, focus) {
+  const n = ++expSeq;
+  const name = el("input", { type: "text", class: "exp-name", "aria-label": `실비 항목명 ${n}`, autocomplete: "off" });
+  const amt = el("input", { type: "number", class: "exp-amt", min: "0", step: "0.01", inputmode: "decimal", "aria-label": `실비 금액 ${n}` });
+  name.value = item.name; amt.value = item.amount;
+  const del = el("button", { type: "button", class: "btn btn-secondary", text: "삭제" });
+  const err = el("div", { class: "err", role: "alert", text: "항목명을 입력하고 금액은 0 이상의 숫자로 입력해 주세요." });
+  const row = el("div", { class: "exp-row" }, name, amt, del, err);
+  del.setAttribute("aria-label", `실비 항목 ${n} 삭제`);
+  del.addEventListener("click", () => {
+    const next = row.nextElementSibling || row.previousElementSibling;
+    row.remove();
+    (next ? next.querySelector(".exp-name") : document.getElementById("addExp")).focus();
+  });
+  expRowsEl.append(row);
+  if (focus) name.focus();
+}
+function setExpenses(list) { expRowsEl.replaceChildren(); list.forEach(x => addExpenseRow(x, false)); }
+function validateRow(row) {
+  const name = row.querySelector(".exp-name"), amt = row.querySelector(".exp-amt");
+  const hasName = name.value.trim() !== "", hasAmt = amt.value !== "";
+  const amtOk = amt.validity.valid && (!hasAmt || Number(amt.value) >= 0);
+  const ok = amtOk && !(hasAmt && !hasName); // 금액이 빈 항목은 메일에 넣지 않음
+  row.classList.toggle("has-error", !ok);
+  [name, amt].forEach(x => x.setAttribute("aria-invalid", ok ? "false" : "true"));
+  return ok;
+}
+document.getElementById("addExp").addEventListener("click", () => addExpenseRow({ name: "", amount: "" }, true));
+expRowsEl.addEventListener("input", ev => { const r = ev.target.closest(".exp-row"); if (r) validateRow(r); });
+setExpenses(DEFAULT_EXPENSES);
+
+const NUM_FIELDS = ["cContract", "invAmount", "travelRate"];
+const COUNT_FIELDS = ["nUvi", "nTemp", "nPress", "nFlow", "travelMen", "travelDays"];
+const DATE_FIELDS = ["attend", "expiry", "payDue", "workDate"];
+function validateField(name) {
+  const input = form.elements[name]; if (!input) return true;
+  const wrap = input.closest(".field");
+  let ok = true;
+  if (name === "vessel") ok = input.value.trim() !== "";
+  if (NUM_FIELDS.includes(name)) ok = input.validity.valid && (input.value === "" || Number(input.value) >= 0);
+  if (COUNT_FIELDS.includes(name)) ok = input.validity.valid && (input.value === "" || (Number.isInteger(Number(input.value)) && Number(input.value) >= 0));
+  if (DATE_FIELDS.includes(name)) ok = input.validity.valid && parseDate(input.value) !== undefined;
+  if (name === "actualLines") ok = parseActual(input.value).bad.length === 0;
+  if (wrap) wrap.classList.toggle("has-error", !ok);
+  input.setAttribute("aria-invalid", ok ? "false" : "true");
+  return ok;
+}
+function validateAll() {
+  const names = ["vessel", ...NUM_FIELDS, ...COUNT_FIELDS, ...DATE_FIELDS, "actualLines"];
+  const bad = names.filter(n => !validateField(n)).map(n => form.elements[n]);
+  for (const r of expRowsEl.querySelectorAll(".exp-row")) if (!validateRow(r)) bad.push(r.querySelector(".exp-name"));
+  return bad;
+}
+form.addEventListener("input", ev => { if (ev.target.name) validateField(ev.target.name); });
+form.addEventListener("blur", ev => { if (ev.target.name) validateField(ev.target.name); }, true);
+
+function renderChecks(e) {
+  const ul = el("ul", { class: "checks" });
+  for (const c of e.checks) {
+    const why = el("div", { class: "why" },
+      el("div", {}, el("b", { text: "입력값" }), el("span", { class: "val", text: c.input })),
+      el("span", { class: "arrow", "aria-hidden": "true", text: "→" }),
+      el("div", {}, el("b", { text: "해석" }), el("span", { class: "val", text: c.interp })),
+      el("span", { class: "arrow", "aria-hidden": "true", text: "→" }),
+      el("div", {}, el("b", { text: "판정" }), el("span", { class: "val", text: c.verdict })));
+    ul.append(el("li", { class: "lv-" + c.lv },
+      el("div", { class: "t" }, dot(c.lv), `${c.t} · ${LV_KO[c.lv]}`), why));
+  }
+  return ul;
+}
+
+function kpi(k, v, d) { return el("div", { class: "kpi" }, el("div", { class: "k", text: k }), el("div", { class: "v", text: v }), el("div", { class: "d", text: d })); }
+function renderKpis(e, owner) {
+  const att = e.attendDays === null ? "—" : e.attendDays < 0 ? `${-e.attendDays}일 지남` : e.attendDays === 0 ? "오늘" : `D-${e.attendDays}`;
+  const exp = e.expiryDays === null ? "—" : e.expiryDays <= 0 ? "만료" : `${e.expiryDays}일`;
+  let total = "—", totalD = "";
+  const c = e.cost;
+  if (e.tier === "Preferred" && c.contract !== null) { total = money(c.contract); totalD = "정액 계약 금액"; }
+  else if (e.tier && e.tier !== "Preferred" && c.ready) { total = money(c.total); totalD = "실비 견적 합계 (식비·현지교통 별도)"; }
+  else if (e.tier && e.tier !== "Preferred") totalD = "계약 금액과 실비 항목 입력 필요";
+  return el("div", { class: "kpis" },
+    kpi("항구 등급", e.tier ? TIER_KO[e.tier] : "—", e.tier ? e.tier : "항구 미입력"),
+    kpi("승선까지", att, e.attend ? fmtDate(e.attend) : "승선일 미입력"),
+    kpi("센서 만료까지", exp, e.expiry ? fmtDate(e.expiry) : "만료일 미입력"),
+    kpi("예상 금액", total, totalD));
+}
+
+async function copyText(text, btn, label) {
+  try { await navigator.clipboard.writeText(text); }
+  catch {
+    const t = el("textarea"); t.value = text; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.append(t); t.select();
+    const ok = document.execCommand("copy"); t.remove();
+    if (!ok) { statusEl.textContent = "복사하지 못했습니다. 내용을 직접 선택해서 복사해 주세요."; return; }
+  }
+  btn.textContent = "복사됨"; statusEl.textContent = `${label}을(를) 복사했습니다. Outlook에 붙여 넣으세요.`;
+  setTimeout(() => { btn.textContent = label + " 복사"; }, 1500);
+}
+
+let draftSeq = 0;
+function renderDraft(d) {
+  const id = "d" + (++draftSeq);
+  const stateLv = d.state === "ok" ? (d.warn ? "warning" : "success") : d.state === "blocked" ? "error" : "inactive";
+  const stateKo = d.state === "ok" ? (d.warn ? "생성됨 · 표현 확인 필요" : "생성됨") : d.state === "blocked" ? "차단됨" : d.state === "na" ? "해당 없음" : "입력 필요";
+  const box = el("article", { class: "draft", "aria-labelledby": id + "-t" },
+    el("div", { class: "draft-head" },
+      el("div", { class: "draft-title", id: id + "-t", text: d.title + (d.tag ? "  " + d.tag : "") }),
+      el("span", { class: "chip" }, dot(stateLv), stateKo)));
+  if (d.note) box.append(el("div", { class: "banner lv-warning reason" }, el("strong", { text: "알림: " }), d.note));
+  if (d.state !== "ok") {
+    box.append(el("div", { class: "reason", text: d.reason }));
+    const b1 = el("button", { type: "button", class: "btn btn-secondary", disabled: "", text: "복사할 초안 없음" });
+    box.append(el("div", { class: "actions" }, b1));
+    return box;
+  }
+  const subjBtn = el("button", { type: "button", class: "btn btn-secondary", text: "제목 복사" });
+  const bodyBtn = el("button", { type: "button", class: "btn btn-secondary", text: "본문 복사" });
+  subjBtn.addEventListener("click", () => copyText(d.subject, subjBtn, "제목"));
+  bodyBtn.addEventListener("click", () => copyText(d.body, bodyBtn, "본문"));
+  box.append(
+    el("div", { class: "box-label" }, el("span", { text: "제목" }), subjBtn),
+    el("pre", { class: "subject", text: d.subject }),
+    el("div", { class: "box-label" }, el("span", { text: "본문" }), bodyBtn),
+    el("pre", { class: "body", text: d.body }));
+  // B. 발송 전 확인 (사람의 최종 확인)
+  const v = el("div", { class: "verify", role: "group", "aria-labelledby": id + "-v" }, el("div", { class: "label", id: id + "-v", text: "발송 전 확인할 것" }));
+  d.checklist.forEach((c, k) => {
+    const cid = `${id}-c${k}`;
+    v.append(el("div", { class: "check" }, el("input", { type: "checkbox", id: cid }), el("label", { for: cid, text: c })));
+  });
+  box.append(v);
+  return box;
+}
+
+function renderTabs(groups) {
+  const wrap = el("div");
+  const list = el("div", { role: "tablist", "aria-label": "메일 초안 종류" });
+  const panels = [];
+  groups.forEach((g, k) => {
+    const okCount = g.items.filter(x => x.state === "ok").length;
+    const tab = el("button", { type: "button", role: "tab", id: "tab" + k, "aria-controls": "panel" + k, "aria-selected": k === 0 ? "true" : "false", tabindex: k === 0 ? "0" : "-1" },
+      `${g.tab} (${okCount}/${g.items.length})`);
+    const panel = el("div", { role: "tabpanel", id: "panel" + k, "aria-labelledby": "tab" + k, tabindex: "0" });
+    if (k !== 0) panel.hidden = true;
+    g.items.forEach(d => panel.append(renderDraft(d)));
+    list.append(tab); panels.push(panel);
+  });
+  const tabs = [...list.children];
+  function select(k) {
+    tabs.forEach((t, j) => { t.setAttribute("aria-selected", j === k ? "true" : "false"); t.tabIndex = j === k ? 0 : -1; panels[j].hidden = j !== k; });
+    tabs[k].focus();
+  }
+  tabs.forEach((t, k) => {
+    t.addEventListener("click", () => select(k));
+    t.addEventListener("keydown", ev => {
+      if (ev.key === "ArrowRight") { ev.preventDefault(); select((k + 1) % tabs.length); }
+      if (ev.key === "ArrowLeft") { ev.preventDefault(); select((k - 1 + tabs.length) % tabs.length); }
+      if (ev.key === "Home") { ev.preventDefault(); select(0); }
+      if (ev.key === "End") { ev.preventDefault(); select(tabs.length - 1); }
+    });
+  });
+  wrap.append(list, ...panels);
+  return wrap;
+}
+
+function run() {
+  const bad = validateAll();
+  if (bad.length) {
+    resultEl.replaceChildren(el("div", { class: "banner lv-error", role: "alert" },
+      el("strong", { text: "입력값을 확인해 주세요. " }), `빨간 표시가 있는 항목 ${bad.length}개를 고쳐야 검토할 수 있습니다.`));
+    bad[0].focus();
+    statusEl.textContent = "";
+    return;
+  }
+  statusEl.textContent = "검토 중…";
+  resultEl.setAttribute("aria-busy", "true");
+  setTimeout(() => {
+    const e = evaluate(readForm(), new Date());
+    const groups = buildDrafts(e);
+    const owner = groups[0].items[0];
+    draftSeq = 0;
+    resultEl.replaceChildren(
+      el("h3", { text: `${e.v.vessel}${e.v.port ? " @ " + e.v.port : ""}` }),
+      renderKpis(e, owner),
+      el("h3", { text: "검토 경고와 판정 근거" }),
+      renderChecks(e),
+      el("h3", { text: "메일 초안" }),
+      renderTabs(groups));
+    resultEl.removeAttribute("aria-busy");
+    statusEl.textContent = "검토를 마쳤습니다.";
+  }, 0);
+}
+form.addEventListener("submit", ev => { ev.preventDefault(); run(); });
+
+document.getElementById("btnClear").addEventListener("click", () => {
+  form.reset();
+  resetAiFill();
+  setExpenses(DEFAULT_EXPENSES);
+  form.querySelectorAll(".has-error").forEach(x => x.classList.remove("has-error"));
+  resultEl.replaceChildren(el("div", { class: "state", text: "입력을 지웠습니다. 새 오더 정보를 입력하세요." }));
+  statusEl.textContent = "";
+  form.elements.vessel.focus();
+});
+
+/* 가짜 예시 데이터 (실제 업무 데이터 아님) */
+function plus(days) { const d = new Date(); d.setDate(d.getDate() + days); return fmtDate(d); }
+const SAMPLES = {
+  valencia: { vessel: "DEMO VESSEL A", port: "Valencia", country: "Spain", attend: 6, expiry: 95, po: "TEST-0001", delivery: "Malaga",
+    remarks: "센서 케이블 15m (10m 초과 특수 사양)", cContract: 3700,
+    expenses: [{ name: "Flight / Transportation", amount: 650 }, { name: "Hotel Accommodation", amount: 350 }, { name: "Travel Labor Fee", amount: 1100 }],
+    invAmount: 5800, validPo: "TEST-0001", cancelPo: "TEST-0000", payDue: 13, approved: true, rma: true,
+    nUvi: 4, nTemp: 2, nPress: 4, nFlow: 2, opTest: "done", opNote: "The BWTS operating test was completed successfully.",
+    dIssues: "Main buzzer is not sounding. Main buzzer and relay require replacement.", dRequired: "Main Buzzer: 1 EA\nRelay: 1 EA",
+    dRecommended: "UV Intensity Housing: 1 EA", dConsumed: "Pressure Transmitter: 4 EA", oldTaken: true },
+  busan: { vessel: "M/V DEMO VESSEL B", port: "Busan", country: "Korea", attend: 30, expiry: 200, po: "TEST-0002", cContract: 3500,
+    nUvi: 4, nTemp: 2, nPress: 4, nFlow: 2, opTest: "done", oldTaken: true },
+  houston: { vessel: "DEMO VESSEL C", port: "Houston", country: "USA", attend: 20, expiry: 45, po: "", remarks: "케이블 8m",
+    cContract: 4000,
+    expenses: [{ name: "Flight / Transportation", amount: 900 }, { name: "Hotel Accommodation", amount: 500 }, { name: "Travel Labor Fee", amount: 1200 }, { name: "Daily Allowance", amount: 300 }] },
+};
+document.querySelectorAll("[data-sample]").forEach(b => b.addEventListener("click", () => {
+  form.reset();
+  resetAiFill();
+  form.querySelectorAll(".has-error").forEach(x => x.classList.remove("has-error"));
+  const s = SAMPLES[b.dataset.sample];
+  setExpenses((s.expenses || DEFAULT_EXPENSES).map(x => ({ name: x.name, amount: String(x.amount) })));
+  for (const [k, val] of Object.entries(s)) {
+    const x = form.elements[k]; if (!x) continue;
+    if (x.type === "checkbox") x.checked = !!val;
+    else if (DATE_FIELDS.includes(k)) x.value = plus(val);
+    else x.value = val;
+  }
+  document.getElementById("sec-bill").open = !!s.invAmount;
+  document.getElementById("sec-done").open = s.nUvi != null;
+  run();
+}));
+
+/* =====================================================================
+   5. 서비스 리포트 AI 분석 (v2 테스트 버전)
+   - AI 호출 부분(AI_PROVIDERS)만 바꾸면 ChatGPT·Claude로 교체할 수 있게 분리
+   - API 키: 사용자가 secrets/gemini_api_key.txt를 골라 불러옴. 메모리에만 두고 저장·표시하지 않음
+   - 업로드 검사(회사 보안 표준 §5): 확장자 .pdf, MIME, 파일 앞부분 %PDF, 크기 14MB 이하
+   ===================================================================== */
+const AI_MAX_BYTES = 14 * 1024 * 1024; // 요청 본문(base64 약 +33%)이 20MB를 넘지 않도록
+const AI_PROMPT = `You are reading a scanned PANASIA "MRO SERVICE REPORT" for a Ballast Water Treatment System (BWTS).
+Extract facts only from the report and return JSON that matches the schema.
+Rules:
+- Section 1 "Sensor Calibration & Replacement": count the rows of UV Intensity / Temperature / Pressure sensors that have a New Sensor S/N filled in. Flowmeter units listed = flowmeter_verified.
+- If the report says new sensors were not delivered / not replaced, set sensors_not_replaced = true.
+- Sections 2-7: list every item whose checked result is Abnormal / Bad / Leakage / Replaced in abnormal_items (e.g. "UV Unit - Wiper Cycle function: Abnormal").
+- Section 8 "Operating Test": operating_test = "done" if results are recorded for all systems, "partial" if only some, "notdone" if none. operating_test_note: one short factual English sentence only when partial/notdone (reason if written).
+- Section 9: crew_training = true if any training content or attendance box is checked.
+- Section 10 "Summary": outstanding_issues (issue and required action in one line), required_spares, recommended_spares, consumed_spares as "Item: N EA" (for sets write the set contents if written).
+- Additional work / Remark text goes to additional_remarks.
+- Cross-check Sections 2-8 against Section 10 before answering. Read every Remark column and every section "Remark :" box in Sections 2-8.
+  * If a Section 2-8 remark gives details about an issue already in Section 10 (quantity, unit number, location, part condition), merge those details into that outstanding_issues line. Example: a remark stating a quantity of damaged parts means the issue line must state that quantity.
+  * If an item is checked Abnormal / Bad / Leakage in Sections 2-7, or a Section 2-8 remark describes a problem, and Section 10 does not mention it, add it to outstanding_issues.
+  * If a Section 2-8 remark records other work or a fact that is not a problem (for example a replaced part or an adjustment) and Section 10 does not mention it, add it to additional_remarks.
+  * Ignore pre-printed guidance and maker information, such as "Maker : ..." or the printed notes in brackets beside SD card format and HMI IPC Setting.
+  * For every line you added or enriched this way, add a short note to added_from_sections stating the section and item it came from.
+- all_items_normal = true only if every checked result in Sections 2-7 is Normal / Good / No Leakage / Done and no Section 2-8 remark describes a problem.
+- NEVER read or return the CBT ID or PW (password) fields or any login credentials.
+- Do not use subjective words such as "successfully", "perfectly", "smoothly". Do not mention MEPC, VGP, compliance or certificate validity.
+- If a value is unclear or unreadable, leave it empty/0 and add a short note to uncertain_fields.
+- date_of_service as YYYY-MM-DD (first day if a range).`;
+const AI_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    vessel_name: { type: "STRING" },
+    place_of_service: { type: "STRING" },
+    date_of_service: { type: "STRING" },
+    uv_intensity_replaced: { type: "INTEGER" },
+    temperature_replaced: { type: "INTEGER" },
+    pressure_replaced: { type: "INTEGER" },
+    flowmeter_verified: { type: "INTEGER" },
+    sensors_not_replaced: { type: "BOOLEAN" },
+    operating_test: { type: "STRING", enum: ["done", "partial", "notdone"] },
+    operating_test_note: { type: "STRING" },
+    crew_training: { type: "BOOLEAN" },
+    abnormal_items: { type: "ARRAY", items: { type: "STRING" } },
+    outstanding_issues: { type: "ARRAY", items: { type: "STRING" } },
+    required_spares: { type: "ARRAY", items: { type: "STRING" } },
+    recommended_spares: { type: "ARRAY", items: { type: "STRING" } },
+    consumed_spares: { type: "ARRAY", items: { type: "STRING" } },
+    additional_remarks: { type: "ARRAY", items: { type: "STRING" } },
+    uncertain_fields: { type: "ARRAY", items: { type: "STRING" } },
+    added_from_sections: { type: "ARRAY", items: { type: "STRING" } },
+    all_items_normal: { type: "BOOLEAN" },
+  },
+  required: ["uv_intensity_replaced", "temperature_replaced", "pressure_replaced", "flowmeter_verified", "operating_test", "crew_training", "all_items_normal"],
+};
+
+const AI_PROVIDERS = {
+  gemini: {
+    label: "Google Gemini",
+    async analyze({ apiKey, model, pdfBase64, signal }) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+      const res = await fetch(url, {
+        method: "POST", signal,
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ inline_data: { mime_type: "application/pdf", data: pdfBase64 } }, { text: AI_PROMPT }] }],
+          generationConfig: { responseMimeType: "application/json", responseSchema: AI_SCHEMA, temperature: 0 },
+        }),
+      });
+      if (!res.ok) {
+        let msg = ""; try { msg = (await res.json()).error?.message || ""; } catch {}
+        const err = new Error(msg); err.status = res.status; throw err;
+      }
+      const data = await res.json();
+      const text = (data.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("");
+      if (!text) { const err = new Error(data.promptFeedback?.blockReason || "empty"); err.status = "empty"; throw err; }
+      return JSON.parse(text);
+    },
+  },
+  // 추후: openai: { ... }, claude: { ... } — 같은 형식(analyze → 위 스키마의 JSON)으로 추가
+};
+const AI_PROVIDER = "gemini";
+const ALL_NORMAL_REMARK = "All inspected items of the Filter Unit, UV Unit, EHS Valve, Control Panel, and UV Power Supply Panel were recorded as normal in the service report.";
+
+const aiState = { key: null, pdf: null, filled: false };
+const aiKeyFile = document.getElementById("aiKeyFile"), aiPdf = document.getElementById("aiPdf");
+const aiRun = document.getElementById("aiRun"), aiResult = document.getElementById("aiResult");
+const aiKeyStatus = document.getElementById("aiKeyStatus"), aiPdfStatus = document.getElementById("aiPdfStatus");
+function aiUpdateButton() { aiRun.disabled = !(aiState.key && aiState.pdf); }
+// 입력 지우기·예시 불러오기 때: 고른 PDF와 AI 결과 표시를 비움 (불러온 키는 유지)
+function resetAiFill() {
+  aiState.pdf = null; aiState.filled = false;
+  aiPdfStatus.textContent = ""; aiResult.replaceChildren();
+  aiUpdateButton();
+}
+
+aiKeyFile.addEventListener("change", async () => {
+  aiState.key = null;
+  const f = aiKeyFile.files[0];
+  aiKeyFile.value = ""; // 같은 파일을 다시 고를 수 있게, 파일 정보도 남기지 않음
+  if (!f) { aiUpdateButton(); return; }
+  if (!(/\.txt$/i.test(f.name) || !/\./.test(f.name)) || f.size > 4096) {
+    aiKeyStatus.textContent = `키 파일 형식이 아닙니다 (고른 파일 이름의 확장자: ${f.name.includes(".") ? f.name.split(".").pop() : "없음"}, 크기 ${f.size}바이트). 키 한 줄만 들어 있는 .txt 파일을 고르세요.`;
+    aiUpdateButton(); return;
+  }
+  // 메모장 BOM, 앞뒤 공백, 따옴표, "GEMINI_API_KEY=" 같은 이름표를 정리하고 첫 줄만 사용
+  const firstLine = (await f.text()).replace(/^﻿/, "").split(/\r?\n/).map(x => x.trim()).find(Boolean) || "";
+  const k = firstLine.replace(/^[A-Za-z_ ]*[=:]\s*/, "").replace(/^["']|["']$/g, "").trim();
+  if (!/^[\x21-\x7E]{20,300}$/.test(k)) {
+    aiKeyStatus.textContent = `파일 안의 키 형식이 올바르지 않습니다 (읽은 길이 ${k.length}자${/\s/.test(k) ? ", 중간에 공백 있음" : ""}${/[^\x00-\x7F]/.test(k) ? ", 한글·특수문자 포함" : ""}). 키 한 줄만 넣었는지 확인하세요.`;
+    aiUpdateButton(); return;
+  }
+  aiState.key = k;
+  aiKeyStatus.textContent = `키를 불러왔습니다 (${k.length}자, 화면에는 표시하지 않습니다). Google에 키를 확인하는 중…`;
+  aiUpdateButton();
+  await aiVerifyKey();
+});
+
+// 키 확인: 사용 가능한 모델 목록 조회 (분석이 아니므로 요금이 들지 않음). 목록으로 모델 선택 칸을 다시 채움
+async function aiVerifyKey() {
+  const sel = document.getElementById("aiModel");
+  try {
+    const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000", { headers: { "x-goog-api-key": aiState.key } });
+    if (!res.ok) {
+      let msg = ""; try { msg = (await res.json()).error?.message || ""; } catch {}
+      aiKeyStatus.textContent = `Google이 키를 거절했습니다 (코드 ${res.status}${msg ? ": " + msg : ""}). AI Studio에서 키를 다시 복사해 넣었는지 확인하세요.`;
+      aiState.key = null; aiUpdateButton(); return;
+    }
+    const models = ((await res.json()).models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
+      .map(m => m.name.replace(/^models\//, ""))
+      .filter(n => /flash/i.test(n) && !/(tts|image|audio|live|embedding|transcribe)/i.test(n));
+    if (!models.length) { aiKeyStatus.textContent = "키는 확인됐지만 이 키로 쓸 수 있는 Flash 계열 모델이 없습니다."; return; }
+    const cur = sel.value;
+    // 가장 저렴한 Flash-Lite 계열을 앞에, 그다음 Flash
+    models.sort((a, b) => (/lite/i.test(b) - /lite/i.test(a)) || b.localeCompare(a));
+    sel.replaceChildren(...models.map(n => el("option", { value: n, text: n + (/lite/i.test(n) ? " (저렴)" : "") })));
+    sel.value = models.includes(cur) ? cur : models[0];
+    aiKeyStatus.textContent = `키 확인 완료 — 이 키로 쓸 수 있는 모델 ${models.length}개를 목록에 넣었습니다. 선택된 모델: ${sel.value}`;
+  } catch (e) {
+    aiKeyStatus.textContent = "Google에 연결하지 못해 키를 확인하지 못했습니다. 인터넷 연결이나 회사 네트워크 차단 여부를 확인하세요. (키는 불러온 상태입니다)";
+  }
+}
+
+aiPdf.addEventListener("change", async () => {
+  aiState.pdf = null; aiPdfStatus.textContent = "";
+  const f = aiPdf.files[0];
+  if (!f) { aiUpdateButton(); return; }
+  const head = new Uint8Array(await f.slice(0, 5).arrayBuffer());
+  const isPdf = String.fromCharCode(...head) === "%PDF-";
+  if (!/\.pdf$/i.test(f.name) || (f.type && f.type !== "application/pdf") || !isPdf) {
+    aiPdfStatus.textContent = "PDF 파일이 아닙니다. 서비스 리포트 PDF를 고르세요."; aiPdf.value = ""; aiUpdateButton(); return;
+  }
+  if (f.size > AI_MAX_BYTES) {
+    aiPdfStatus.textContent = `파일이 너무 큽니다 (${(f.size / 1048576).toFixed(1)}MB). 14MB 이하로 줄여 주세요.`; aiPdf.value = ""; aiUpdateButton(); return;
+  }
+  aiState.pdf = f;
+  aiPdfStatus.textContent = `${f.name} (${(f.size / 1048576).toFixed(1)}MB) — 준비됨`;
+  aiUpdateButton();
+});
+
+function toBase64(file) {
+  return new Promise((ok, fail) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(",")[1]);
+    r.onerror = () => fail(r.error);
+    r.readAsDataURL(file);
+  });
+}
+const CRED_RE = /\b(PW|password|passwd|pass\s*word|login\s*id|CBT\s*ID)\b/i;
+function cleanList(v) { return (Array.isArray(v) ? v : []).map(x => String(x).trim()).filter(x => x && !CRED_RE.test(x)); }
+function aiErrorText(e) {
+  const detail = (typeof e.status === "number" ? ` [코드 ${e.status}${e.message ? ": " + e.message : ""}]` : "");
+  return aiErrorBase(e) + detail;
+}
+function aiErrorBase(e) {
+  if (e.name === "AbortError") return "응답이 너무 오래 걸려 중단했습니다 (2분). 잠시 후 다시 시도하세요.";
+  if (e.status === 400) return "요청이 거절되었습니다. API 키·모델·PDF를 확인하세요.";
+  if (e.status === 401 || e.status === 403) return "API 키 권한이 없습니다. 키를 다시 확인하세요.";
+  if (e.status === 402) return "이 키의 Google 프로젝트는 결제(선불 크레딧)가 연결되어 있는데 크레딧이 모두 소진되었습니다. AI Studio에서 크레딧을 충전하거나, 결제가 연결되지 않은 프로젝트의 키를 쓰세요.";
+  if (e.status === 404) return "선택한 모델을 찾을 수 없습니다. 다른 모델을 골라 보세요.";
+  if (e.status === 429) return "무료 등급 사용 한도를 넘었습니다. 잠시 후 다시 시도하거나 다른 모델을 고르세요.";
+  if (typeof e.status === "number" && e.status >= 500) return "AI 서비스 쪽 오류입니다. 잠시 후 다시 시도하세요.";
+  if (e.status === "empty") return "AI가 결과를 돌려주지 않았습니다. 다시 시도하세요.";
+  if (e instanceof SyntaxError) return "AI 결과를 읽지 못했습니다. 다시 시도하거나 다른 모델을 고르세요.";
+  return "AI 서비스에 연결할 수 없습니다. 인터넷 연결이나 회사 네트워크 차단 여부를 확인하세요.";
+}
+
+function aiFill(r) {
+  const set = (name, v) => { const x = form.elements[name]; if (x) x.value = v; };
+  set("nUvi", Number.isInteger(r.uv_intensity_replaced) ? r.uv_intensity_replaced : "");
+  set("nTemp", Number.isInteger(r.temperature_replaced) ? r.temperature_replaced : "");
+  set("nPress", Number.isInteger(r.pressure_replaced) ? r.pressure_replaced : "");
+  set("nFlow", Number.isInteger(r.flowmeter_verified) ? r.flowmeter_verified : "");
+  form.elements.sensorNotArrived.checked = !!r.sensors_not_replaced;
+  set("opTest", ["done", "partial", "notdone"].includes(r.operating_test) ? r.operating_test : "done");
+  set("opNote", CRED_RE.test(r.operating_test_note || "") ? "" : (r.operating_test_note || ""));
+  form.elements.crewTraining.checked = !!r.crew_training;
+  const issues = cleanList(r.outstanding_issues), remarks = cleanList(r.additional_remarks);
+  // 2~8번이 모두 정상이고 미결 사항·비고에 그런 언급이 없으면 전체 정상 문장을 추가
+  const allNormal = r.all_items_normal === true && !cleanList(r.abnormal_items).length && !issues.length;
+  if (allNormal && !remarks.some(x => /\bnormal\b/i.test(x))) remarks.push(ALL_NORMAL_REMARK);
+  set("dIssues", issues.join("\n"));
+  set("dRequired", cleanList(r.required_spares).join("\n"));
+  set("dRecommended", cleanList(r.recommended_spares).join("\n"));
+  set("dConsumed", cleanList(r.consumed_spares).join("\n"));
+  set("dRemarks", remarks.join("\n"));
+  const d = parseDate((r.date_of_service || "").trim());
+  if (d) set("workDate", fmtDate(d));
+  if (!form.elements.port.value.trim() && r.place_of_service) set("port", String(r.place_of_service).trim());
+  [...COUNT_FIELDS, "workDate"].forEach(validateField);
+}
+
+aiRun.addEventListener("click", async () => {
+  if (!aiState.key || !aiState.pdf) return;
+  const model = document.getElementById("aiModel").value;
+  aiRun.disabled = true;
+  aiResult.replaceChildren(el("div", { class: "banner lv-info", text: `리포트를 분석하는 중입니다… (${AI_PROVIDERS[AI_PROVIDER].label} · ${model}, 보통 수십 초 걸립니다)` }));
+  const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 120000);
+  try {
+    const pdfBase64 = await toBase64(aiState.pdf);
+    const r = await AI_PROVIDERS[AI_PROVIDER].analyze({ apiKey: aiState.key, model, pdfBase64, signal: ctrl.signal });
+    aiFill(r);
+    aiState.filled = true;
+    const box = el("div", { class: "banner lv-success", role: "status" },
+      el("strong", { text: "칸을 채웠습니다. " }), "AI가 읽은 값입니다 — 반드시 리포트 원본과 대조한 뒤 [검토하기]를 누르세요.");
+    const notes = [];
+    const vName = (r.vessel_name || "").toUpperCase(), formV = cleanVessel(form.elements.vessel.value);
+    if (vName && formV && !vName.includes(formV) && !formV.includes(cleanVessel(vName)))
+      notes.push(`리포트의 선박명(${r.vessel_name})이 입력한 선박명(${form.elements.vessel.value})과 다릅니다.`);
+    const abn = cleanList(r.abnormal_items);
+    if (abn.length) notes.push("리포트에서 Abnormal·Bad·Leakage·Replaced로 표시된 항목: " + abn.join(" / ") + " — 미결 사항·추가 비고에 맞게 들어갔는지 확인하세요.");
+    cleanList(r.added_from_sections).forEach(a => notes.push("2~8번에서 반영한 내용: " + a));
+    cleanList(r.uncertain_fields).forEach(u => notes.push("AI가 확실히 읽지 못함: " + u));
+    const wrap = el("div", {}, box);
+    if (notes.length) {
+      const ul = el("ul", { class: "ai-list" });
+      notes.forEach(n => ul.append(el("li", { text: n })));
+      wrap.append(el("div", { class: "banner lv-warning" }, el("strong", { text: "확인할 것" }), ul));
+    }
+    aiResult.replaceChildren(wrap);
+    document.getElementById("sec-done").open = true;
+  } catch (e) {
+    aiResult.replaceChildren(el("div", { class: "banner lv-error", role: "alert", text: aiErrorText(e) }));
+  } finally {
+    clearTimeout(timer);
+    aiUpdateButton();
+  }
+});
+
+/* =====================================================================
+   6. 관리대장 CSV 불러오기 (v3 테스트)
+   - 파일은 브라우저 메모리에서만 읽음. 저장·전송 없음
+   - 업로드 검사(회사 보안 표준 §5): 확장자 .csv, MIME, 5MB 이하, 텍스트 파일 여부
+   ===================================================================== */
+const LED_MAX_BYTES = 5 * 1024 * 1024;
+const LED_FIELDS = [
+  { k: "vessel", label: "선박명 *", re: /vessel|호선|선박|선명|ship\s*name/i },
+  { k: "expiry", label: "센서 교정 만료일", re: /due|expir|만료|유효|교정/i },
+  { k: "done", label: "서비스 실적 일자 (만료일 = +1년)", re: /실적/ },
+  { k: "attend", label: "승선 예정일", re: /attend|승선|방선|서비스\s*일|service\s*date/i },
+  { k: "port", label: "기항 항구", re: /port|항구|기항|place|장소|지역/i },
+  { k: "country", label: "국가", re: /country|국가/i },
+  { k: "po", label: "PO 번호", re: /\bp\.?o\.?\b|발주/i },
+  { k: "owner", label: "선사 / 고객사", re: /owner|선주|선사|client|고객/i },
+  { k: "manager", label: "담당자 (담당자로 보기)", re: /담당자|담당|manager|\bPIC\b/i },
+  { k: "remarks", label: "N열 비고", re: /remark|비고/i },
+  // 칸반 자동 분류용 (v4)
+  { k: "ready", label: "센서 준비완 (→ ③)", re: /준비\s*완/ },
+  { k: "shipped", label: "센서 출고일 (→ ③)", re: /출고/ },
+  { k: "paidNote", label: "정산 비고 (\"수금완료\" → 끝난 건)", re: null }, // 마지막 "비고" 열 (2026 시트 AO열) — guessMap에서 지정
+  { k: "paid", label: "수금일자 (정산 비고가 없을 때만)", re: /수금/ },
+  { k: "invoice", label: "인보이스 번호 (할 일 자동 체크)", re: /invoice\s*no/i },
+  { k: "prepDue", label: "센서 준비기한 (S열 — 일정 확정 반영)", re: /준비\s*기한/ },
+  { k: "returned", label: "구품 회수 (끝난 건 판단)", re: /구품/ },
+];
+// 칸반 4단계 (사용자 확인 2026-11-09). 견적·승인 단계는 두지 않음
+const LANES = [
+  { t: "① 연락 시작", d: "선주에게 만료일 알림, 장기 스케줄 요청" },
+  { t: "② 스케줄 조율", d: "기항지 정하기, 대리점 엔지니어 문의 (승선 예정 있음)" },
+  { t: "③ 서비스 진행", d: "Work Order 발행 후 — 센서 준비·출고·방선" },
+  { t: "④ 완료·정산", d: "완료 보고, 인보이스, 수금, 구품 회수 (실적 일자 있음)" },
+];
+const BOARD_STORE = "bwtsMroBoard.v1"; // 직접 옮긴 칸만 이 PC 브라우저에 저장
+const MANAGER_STORE = "bwtsMroManager.v1"; // 고른 담당자 (v6)
+const TASK_STORE = "bwtsMroTasks.v1";       // 카드별 할 일 체크 (v6)
+// 칸별 할 일 (사용자 확인 2026-11-09 — 같은 칸 안의 순서는 상관없음). auto: 관리대장 값으로 자동 체크
+const TASKS = [
+  [{ id: "c1", t: "만료일 알림·장기 스케줄 요청 메일 발송" }, { id: "c2", t: "기항 계획(장기 스케줄) 받음" }],
+  [{ id: "s1", t: "기항지·일정 확정" }, { id: "s2", t: "대리점 엔지니어 가능 확인" }, { id: "s3", t: "선주 방선 확인 (또는 견적 승인)" }],
+  [{ id: "w1", t: "Work Order 발행", note: "추후 메일 연동: Job order 메일 수신 시 자동" },
+   { id: "w2", t: "센서 준비 완료", auto: x => isFilled(x.ready) }, { id: "w3", t: "센서 출고", auto: x => isFilled(x.shipped) },
+   { id: "w4", t: "방선 완료", auto: x => isFilled(x.doneRaw) }],
+  [{ id: "f1", t: "완료 보고 메일 발송", auto: x => x.paidOk }, // 수금완료면 완료 보고도 끝난 것으로 봄 (사용자 확인)
+   { id: "f2", t: "인보이스 발행", auto: x => isFilled(x.invoice) },
+   { id: "f3", t: "수금완료", auto: x => x.paidOk },
+   { id: "f4", t: "구품 회수", auto: x => isReturned(x.returned), warn: x => led.map.returned !== undefined && !x.returned ? "관리대장 구품회수 칸이 비어 있음 — 확인 필요" : "" }],
+];
+const LED_HEADER_SCAN = 100;   // 제목 줄로 고를 수 있는 행 수
+const LED_EXPIRY_COL = 17;     // 2025 시트 R열 = 마지막 교정일 → 만료일 = +1년 (사용자 확인 2026-11-09)
+const led = { rows: [], header: 0, start: 1, plusYear: false, year: new Date().getFullYear(), map: {}, sortKey: "days", sortDir: 1, showAll: false, view: "list", showDone: false,
+  manager: (() => { try { return localStorage.getItem(MANAGER_STORE) || ""; } catch { return ""; } })() };
+const ledRef = { byVessel: null };   // 작년 시트: 선명 → 만료일
+const ledEls = {
+  refFile: document.getElementById("ledRefFile"), refStatus: document.getElementById("ledRefStatus"), view: document.getElementById("ledView"),
+  managerBox: document.getElementById("ledManagerBox"), manager: document.getElementById("ledManager"),
+  start: document.getElementById("ledStart"), plusYear: document.getElementById("ledPlusYear"), year: document.getElementById("ledYear"),
+  file: document.getElementById("ledFile"), status: document.getElementById("ledStatus"),
+  map: document.getElementById("ledMap"), headerSel: document.getElementById("ledHeader"),
+  grid: document.getElementById("ledMapGrid"), list: document.getElementById("ledList"),
+};
+
+function parseCsv(text) {
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; }
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(cell); rows.push(row); row = []; cell = "";
+    } else cell += c;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+function decodeText(buf) {
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(buf).replace(/^﻿/, ""); }
+  catch { return new TextDecoder("euc-kr").decode(buf); } // 엑셀에서 저장한 한글 CSV
+}
+function colName(i) { let s = ""; for (i++; i > 0; i = Math.floor((i - 1) / 26)) s = String.fromCharCode(65 + (i - 1) % 26) + s; return s; }
+
+const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+function makeDate(y, m, d) {
+  if (y < 100) y += 2000;
+  const t = new Date(y, m - 1, d);
+  return t.getFullYear() === y && t.getMonth() === m - 1 && t.getDate() === d ? t : null;
+}
+// 날짜 해석. 월/일을 구분할 수 없는 값(예: 3/4/2027)은 추측하지 않고 null
+// yearIfMissing: 관리대장처럼 "월/일"만 적힌 값(예: 3/15)에 붙일 연도 (없으면 해석하지 않음)
+function parseLooseDate(raw, yearIfMissing) {
+  const s = String(raw || "").trim().replace(/\s+/g, " ");
+  let m;
+  if (yearIfMissing && (m = /^(\d{1,2})\/(\d{1,2})$/.exec(s))) return makeDate(yearIfMissing, +m[1], +m[2]);
+  if ((m = /^(\d{4})[-./년 ]\s*(\d{1,2})[-./월 ]\s*(\d{1,2})일?$/.exec(s))) return makeDate(+m[1], +m[2], +m[3]);
+  if ((m = /^(\d{2})\.(\d{1,2})\.(\d{1,2})\.?$/.exec(s))) return makeDate(+m[1], +m[2], +m[3]);
+  if ((m = /^(\d{1,2})(?:st|nd|rd|th)?[- ./]([A-Za-z]{3,9})\.?[- ./,]*(\d{2,4})$/.exec(s))) { const mo = MONTHS[m[2].slice(0, 3).toLowerCase()]; return mo ? makeDate(+m[3], mo, +m[1]) : null; }
+  if ((m = /^([A-Za-z]{3,9})\.? (\d{1,2})(?:st|nd|rd|th)?,? (\d{2,4})$/.exec(s))) { const mo = MONTHS[m[1].slice(0, 3).toLowerCase()]; return mo ? makeDate(+m[3], mo, +m[2]) : null; }
+  if ((m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(s))) {
+    const a = +m[1], b = +m[2];
+    if (a > 12 && b <= 12) return makeDate(+m[3], b, a);
+    if (b > 12 && a <= 12) return makeDate(+m[3], a, b);
+    return null;
+  }
+  return null;
+}
+function ledStage(days) {
+  if (days === null) return { t: "날짜 확인 필요", lv: "inactive" };
+  if (days <= 0) return { t: "만료", lv: "error" };
+  if (days <= RULES.expiryDecideDays) return { t: "방향 잡기", lv: "warning" };
+  if (days <= RULES.expiryScheduleDays) return { t: "스케줄링", lv: "info" };
+  if (days <= RULES.expiryContactDays) return { t: "연락 시작", lv: "info" };
+  return { t: "아직 시기 아님", lv: "success" };
+}
+function ledGuessHeader(rows) {
+  let best = 0, bestScore = -1;
+  rows.slice(0, LED_HEADER_SCAN).forEach((r, i) => {
+    const hits = LED_FIELDS.filter(f => f.re && r.some(c => f.re.test(c))).length;
+    const filled = r.filter(c => c.trim()).length;
+    const score = hits * 100 + filled;
+    if (score > bestScore) { bestScore = score; best = i; }
+  });
+  return best;
+}
+function guessMap(head) {
+  const used = new Set(), map = {};
+  for (const f of LED_FIELDS) {
+    if (!f.re) continue;
+    const i = head.findIndex((c, n) => !used.has(n) && f.re.test(c));
+    if (i >= 0) { map[f.k] = i; used.add(i); }
+  }
+  // 정산 비고 = 마지막 "비고" 열 (첫 비고 열은 N열 비고로 사용) — 사용자 확인 2026-11-09: 끝난 건은 AO열 "수금완료"로 판단
+  for (let i = head.length - 1; i >= 0; i--) if (/비고|remark/i.test(head[i]) && !used.has(i)) { map.paidNote = i; used.add(i); break; }
+  // 관리대장 2025 시트: R열(승선 일자 = 마지막 교정일) + 1년 = 만료일
+  let plusYear = false;
+  if (/승선\s*일자|교정/.test(head[LED_EXPIRY_COL] || "")) {
+    for (const k of Object.keys(map)) if (map[k] === LED_EXPIRY_COL) { delete map[k]; used.delete(LED_EXPIRY_COL); }
+    map.expiry = LED_EXPIRY_COL; used.add(LED_EXPIRY_COL); plusYear = true;
+  }
+  if (map.remarks === undefined && head.length > 13 && !used.has(13)) map.remarks = 13; // 관리대장 N열
+  return { map, plusYear };
+}
+function ledGuessMap() {
+  const g = guessMap(led.rows[led.header] || []);
+  led.map = g.map; led.plusYear = g.plusYear;
+}
+function normVessel(v) { return cleanVessel(String(v || "")).replace(/[^A-Z0-9가-힣]/g, ""); }
+const isFilled = v => !!v && !/^(x|-|n\/?a|미.*)$/i.test(v);       // X·미입고 같은 값은 "안 됨"으로 봄
+const isReturned = v => /^(v|x|o|완료|회수|회수\s*완료)$/i.test(v); // 구품 반납 완료 — "V"·"X" = 완료, "!" = 미반납 (사용자 확인 2026-11-09)
+async function readCsvFile(f) {
+  const okType = !f.type || ["text/csv", "application/vnd.ms-excel", "text/plain"].includes(f.type);
+  if (!/\.csv$/i.test(f.name) || !okType) return { error: "CSV 파일이 아닙니다. 구글 시트에서 .csv로 내려받은 파일을 고르세요." };
+  if (f.size > LED_MAX_BYTES) return { error: `파일이 너무 큽니다 (${(f.size / 1048576).toFixed(1)}MB). 5MB 이하만 불러올 수 있습니다.` };
+  const buf = new Uint8Array(await f.arrayBuffer());
+  if (buf.subarray(0, 4096).includes(0)) return { error: "텍스트 CSV 파일이 아닙니다. 파일 형식을 확인해 주세요." };
+  const rows = parseCsv(decodeText(buf));
+  if (rows.filter(r => r.some(c => c.trim())).length < 2) return { error: "내용을 읽을 수 없거나 데이터 줄이 없습니다." };
+  const fy = /(?:^|\D)(20\d{2})(?:\D|$)/.exec(f.name);
+  return { rows, year: fy ? +fy[1] : null };
+}
+// 직접 옮긴 칸: { key: { stage, autoAt } } — 자동 분류가 옮긴 때보다 앞으로 나가면 자동 분류를 따름
+function boardLoad() { try { return JSON.parse(localStorage.getItem(BOARD_STORE) || "{}") || {}; } catch { return {}; } }
+function boardSave(o) { try { localStorage.setItem(BOARD_STORE, JSON.stringify(o)); return true; } catch { return false; } }
+let boardMoves = boardLoad();
+let taskChecks = (() => { try { return JSON.parse(localStorage.getItem(TASK_STORE) || "{}") || {}; } catch { return {}; } })();
+const openTasks = new Set(); // 펼친 체크리스트 (화면을 다시 그려도 유지)
+function addOneYear(d) {
+  const y = d.getFullYear() + 1, m = d.getMonth(), t = new Date(y, m, d.getDate());
+  return t.getMonth() === m ? t : new Date(y, m + 1, 0); // 2월 29일 → 다음 해 2월 28일
+}
+function ledBuildMapUi() {
+  const head = led.rows[led.header] || [];
+  const opt = (v, t) => el("option", { value: String(v), text: t });
+  ledEls.headerSel.replaceChildren(...led.rows.slice(0, LED_HEADER_SCAN).map((r, i) =>
+    opt(i, `${i + 1}행: ${r.filter(c => c.trim()).slice(0, 4).join(" / ").slice(0, 60) || "(빈 줄)"}`)));
+  ledEls.headerSel.value = String(led.header);
+  ledEls.start.min = String(led.header + 2); ledEls.start.max = String(led.rows.length);
+  ledEls.start.value = String(led.start + 1);
+  ledEls.plusYear.checked = led.plusYear;
+  ledEls.year.value = String(led.year);
+  ledEls.grid.replaceChildren(...LED_FIELDS.map(f => {
+    const id = "ledCol-" + f.k;
+    const sel = el("select", { id }, opt("", "(연결 안 함)"), ...head.map((c, i) => opt(i, `${colName(i)}열: ${c.trim().slice(0, 30) || "(제목 없음)"}`)));
+    sel.value = led.map[f.k] === undefined ? "" : String(led.map[f.k]);
+    sel.addEventListener("change", () => {
+      if (sel.value === "") delete led.map[f.k]; else led.map[f.k] = +sel.value;
+      ledRender();
+    });
+    return el("div", { class: "field" }, el("label", { for: id, text: f.label }), sel);
+  }));
+}
+function ledItems() {
+  const today = new Date();
+  const get = (r, k) => led.map[k] === undefined ? "" : String(r[led.map[k]] ?? "").trim();
+  const first = Math.max(led.start, led.header + 1);
+  const rows = led.rows.slice(first);
+  const doneSet = new Set(Array.isArray(led.doneRows) ? led.doneRows : []); // 시트 D열 빨강 = 완료 보고 발송 (v10)
+  // 같은 배의 가장 최근 실적 일자 (담당자·행과 관계없이 파일 전체에서) — 예: 다른 담당자가 올해 진행한 건 (사용자 확인 2026-11-09)
+  const latestDone = new Map();
+  for (const r of rows) {
+    const v = normVessel(get(r, "vessel")), d = parseLooseDate(get(r, "done"), led.year);
+    if (v && d && (!latestDone.has(v) || latestDone.get(v) < d)) latestDone.set(v, d);
+  }
+  return rows.map((r, ri) => {
+    const vessel = get(r, "vessel"); if (!vessel) return null;
+    const rowNo = first + ri + 1; // 시트 행 번호 (구글 시트에서 읽었을 때 A1부터이므로 그대로 맞음)
+    const expRaw = get(r, "expiry"), attRaw = get(r, "attend"), doneRaw = get(r, "done");
+    const attend = parseLooseDate(attRaw, led.year), done = parseLooseDate(doneRaw, led.year);
+    // 만료일: ① 이 배의 올해 최근 실적 일자 + 1년 → ② 연결한 만료일 열 → ③ 작년 시트(선명으로 연결)
+    let expiry = null, expSrc = "";
+    const last = latestDone.get(normVessel(vessel));
+    if (last) { expiry = addOneYear(last); expSrc = done && done.getTime() === last.getTime() ? "올해 실적 + 1년" : `올해 다른 행 실적 ${fmtDate(last)} + 1년`; }
+    else if (!isFilled(doneRaw)) {
+      const base = parseLooseDate(expRaw, led.year);
+      if (base) { expiry = led.plusYear ? addOneYear(base) : base; expSrc = led.plusYear ? "승선 일자 + 1년" : "관리대장 만료일"; }
+      else if (ledRef.byVessel) { const d = ledRef.byVessel.get(normVessel(vessel)); if (d) { expiry = d; expSrc = "작년 시트 + 1년"; } }
+    }
+    const days = expiry ? daysBetween(today, expiry) : null;
+    const ready = get(r, "ready"), shipped = get(r, "shipped"), paid = get(r, "paid"), returned = get(r, "returned");
+    const auto = isFilled(doneRaw) ? 3 : (isFilled(shipped) || isFilled(ready)) ? 2 : attRaw ? 1 : 0;
+    const paidOk = led.map.paidNote !== undefined ? /수금\s*완료/.test(get(r, "paidNote")) : isFilled(paid);
+    const finished = paidOk && isReturned(returned);
+    const po = get(r, "po");
+    return { key: normVessel(vessel) + "|" + po, vessel, rowNo, prepDue: get(r, "prepDue"), manager: get(r, "manager"), port: get(r, "port"), country: get(r, "country"), po, owner: get(r, "owner"), remarks: get(r, "remarks"),
+      expRaw, attRaw, doneRaw, doneDate: done, expiry, expSrc, attend, days, auto, finished, paid, returned, paidOk, ready, shipped, invoice: get(r, "invoice"), doneMailed: doneSet.has(rowNo) };
+  }).filter(Boolean);
+}
+function ledLoadRow(x) {
+  form.reset(); resetAiFill(); setExpenses(DEFAULT_EXPENSES);
+  form.querySelectorAll(".has-error").forEach(n => n.classList.remove("has-error"));
+  const set = (k, v) => { if (v) form.elements[k].value = v; };
+  // 한글 항구·국가 → 영문 (v7). "부산, 한국"처럼 한 칸에 둘이 있고 국가 칸이 비면 나눠 넣음
+  let port = x.port, country = x.country;
+  if (!country && /[,\n]/.test(port)) { const ps = port.split(/\s*[,\n]\s*/).filter(Boolean); country = ps.length > 1 ? ps.pop() : ""; port = ps.join(", "); }
+  const portEn = toEnPlace(port);
+  let countryEn = toEnPlace(country);
+  if (!countryEn && COUNTRY_EN.has(portEn)) countryEn = portEn; // 싱가포르·홍콩처럼 항구 = 국가
+  set("vessel", x.vessel); set("port", portEn); set("country", countryEn); set("po", x.po); set("owner", x.owner); set("remarks", x.remarks);
+  if (x.attend) form.elements.attend.value = fmtDate(x.attend);
+  if (x.expiry) form.elements.expiry.value = fmtDate(x.expiry);
+  if (x.doneDate) form.elements.workDate.value = fmtDate(x.doneDate); // 실적 일자 = 작업일 (구품 반납 D+30 기준)
+  if (led.map.returned !== undefined) form.elements.oldReturned.checked = isReturned(x.returned || "");
+  run();
+  document.getElementById("in-title").scrollIntoView({ block: "start" });
+  form.elements.vessel.focus({ preventScroll: true });
+}
+function ledSortVal(x, k) {
+  if (k === "days") return x.days === null ? Infinity : x.days;
+  if (k === "attend") return x.attend ? x.attend.getTime() : Infinity;
+  return String(x[k] ?? "").toUpperCase();
+}
+let ledPop = null;
+function ledClosePop() { if (ledPop) { ledPop.remove(); ledPop = null; } }
+document.addEventListener("click", e => { if (ledPop && !ledPop.contains(e.target) && !(e.target.classList && e.target.classList.contains("led-fbtn"))) ledClosePop(); });
+function ledOpenFilter(fkey, valFn, items, btn) {
+  const same = ledPop && ledPop.dataset.k === fkey; ledClosePop(); if (same) return;
+  const values = [...new Set(items.map(valFn))].sort((a, b) => String(a).localeCompare(String(b), "ko"));
+  const sel = led.colFilters[fkey];
+  const pop = el("div", { class: "olk-fpop" }); pop.dataset.k = fkey;
+  const allCb = el("input", { type: "checkbox" }); allCb.checked = !sel;
+  const apply = () => {
+    const boxes = [...pop.querySelectorAll("input[data-v]")], checked = boxes.filter(x => x.checked).map(x => x.getAttribute("data-v"));
+    if (checked.length === boxes.length) delete led.colFilters[fkey]; else led.colFilters[fkey] = new Set(checked);
+    ledRender();
+  };
+  allCb.addEventListener("change", () => { pop.querySelectorAll("input[data-v]").forEach(x => { x.checked = allCb.checked; }); apply(); });
+  pop.append(el("label", {}, allCb, el("strong", { text: " (전체)" })));
+  values.forEach(v => {
+    const cb = el("input", { type: "checkbox" }); cb.setAttribute("data-v", v); cb.checked = !sel || sel.has(v);
+    cb.addEventListener("change", () => { allCb.checked = [...pop.querySelectorAll("input[data-v]")].every(x => x.checked); apply(); });
+    pop.append(el("label", {}, cb, " " + v));
+  });
+  document.body.append(pop);
+  const rect = btn.getBoundingClientRect();
+  pop.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - pop.offsetWidth - 8)) + "px";
+  pop.style.top = (rect.bottom + 4) + "px";
+  ledPop = pop;
+}
+function ledRender() {
+  if (!led.rows.length) { ledEls.list.replaceChildren(); ledEls.view.hidden = true; ledEls.managerBox.hidden = true; ruleEls.box.hidden = true; var _ob = document.getElementById("olkBox"); if (_ob) _ob.hidden = true; return; }
+  ledEls.view.hidden = false;
+  { var _ob2 = document.getElementById("olkBox"); if (_ob2) _ob2.hidden = false; }
+  ledEls.view.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === led.view)));
+  if (led.map.vessel === undefined) {
+    ledEls.map.open = true;
+    ledEls.list.replaceChildren(el("div", { class: "banner lv-warning", role: "alert" }, el("strong", { text: "열을 연결해 주세요. " }), "위 [열 연결 확인]에서 선박명 열을 고르세요."));
+    return;
+  }
+  const every = ledItems();
+  ledBuildManagerUi(every);
+  const all = led.map.manager !== undefined && led.manager ? every.filter(x => splitNames(x.manager).includes(led.manager)) : every;
+  ledRenderRule(all);
+  const noExpirySource = led.map.expiry === undefined && led.map.done === undefined && !ledRef.byVessel;
+  const expNote = noExpirySource ? el("div", { class: "banner lv-info", role: "status" }, el("strong", { text: "만료일을 계산할 정보가 없습니다. " }),
+    "위 [작년 시트 CSV]를 고르거나, [열 연결 확인]에서 만료일 또는 실적 일자 열을 연결하세요.") : null;
+  if (led.view === "board") { ledRenderBoard(all, expNote); return; }
+  const listHead = expNote ? [expNote] : [];
+  const unread = all.filter(x => x.days === null).length;
+  led.colFilters = led.colFilters || {};
+  const fval = { port: x => x.port || "(미기재)", owner: x => x.owner || "(선사 미기재)", stage: x => ledStage(x.days).t };
+  const passF = x => Object.keys(led.colFilters).every(k => !led.colFilters[k] || (fval[k] && led.colFilters[k].has(fval[k](x))));
+  const shown = all.filter(x => (led.showAll || x.days === null || x.days <= RULES.expiryContactDays) && passF(x))
+    .sort((a, b) => {
+      const p = ledSortVal(a, led.sortKey), q = ledSortVal(b, led.sortKey);
+      return (p < q ? -1 : p > q ? 1 : 0) * led.sortDir;
+    });
+  const toggleId = "ledShowAll";
+  const toggle = el("input", { type: "checkbox", id: toggleId });
+  toggle.checked = led.showAll;
+  toggle.addEventListener("change", () => { led.showAll = toggle.checked; ledRender(); });
+  const collapseBtn = el("button", { type: "button", class: "btn btn-secondary", text: led.listCollapsed ? "목록 펼치기 ▼" : "목록 접기 ▲" });
+  collapseBtn.addEventListener("click", () => { led.listCollapsed = !led.listCollapsed; ledRender(); });
+  const nFilt = Object.keys(led.colFilters).length;
+  const bar = el("div", { class: "led-bar" },
+    el("span", { text: `${managerLabel()}전체 ${all.length}척 중 ${shown.length}척 표시${nFilt ? " (필터 적용 중)" : ""}${unread ? ` · 만료일 못 읽음 ${unread}척` : ""}` }),
+    el("div", { class: "check" }, toggle, el("label", { for: toggleId, text: "만료까지 121일 이상인 선박도 보기" })),
+    collapseBtn);
+  if (!shown.length) {
+    ledEls.list.replaceChildren(...listHead, bar, el("div", { class: "state", text: "만료 120일 이내인 선박이 없습니다." }));
+    return;
+  }
+  const cols = [["vessel", "선박명"], ["port", "기항 항구"], ["owner", "선사"], [null, led.plusYear ? "교정 만료일 (+1년)" : "교정 만료일"], ["days", "만료까지"], [null, "단계"], ["attend", "승선 예정일"], [null, "PO"], [null, "작업"]];
+  const fkOf = t => t === "기항 항구" ? "port" : t === "선사" ? "owner" : t === "단계" ? "stage" : null;
+  const withFilter = (th, t) => {
+    const key = fkOf(t); if (!key) return th;
+    const fb = el("button", { type: "button", class: "led-fbtn" + (led.colFilters[key] ? " active" : ""), title: t + " 필터", "aria-label": t + " 필터" }, "▼");
+    fb.addEventListener("click", e => { e.stopPropagation(); ledOpenFilter(key, fval[key], all, fb); });
+    th.append(fb); return th;
+  };
+  const thead = el("tr", {}, ...cols.map(([k, t]) => {
+    if (!k) return withFilter(el("th", { scope: "col" }, t), t);
+    const on = led.sortKey === k;
+    const b = el("button", { type: "button", text: t + (on ? (led.sortDir > 0 ? " ▲" : " ▼") : "") });
+    b.addEventListener("click", () => {
+      if (on) led.sortDir *= -1; else { led.sortKey = k; led.sortDir = 1; }
+      ledRender();
+      const again = [...ledEls.list.querySelectorAll("th button")].find(n => n.textContent.startsWith(t)); if (again) again.focus();
+    });
+    return withFilter(el("th", { scope: "col", "aria-sort": on ? (led.sortDir > 0 ? "ascending" : "descending") : "none" }, b), t);
+  }));
+  const tbody = el("tbody");
+  shown.forEach(x => {
+    const st = ledStage(x.days);
+    const dayText = x.days === null ? "—" : x.days <= 0 ? (x.days === 0 ? "오늘" : `${-x.days}일 지남`) : `${x.days}일`;
+    const load = el("button", { type: "button", class: "btn btn-secondary", text: "불러오기", "aria-label": `${x.vessel} 입력 칸에 불러오기` });
+    load.addEventListener("click", () => ledLoadRow(x));
+    tbody.append(el("tr", {},
+      el("td", { text: x.vessel }), el("td", { text: x.port || "—" }), el("td", { text: x.owner || "—" }),
+      el("td", { text: x.expiry ? fmtDate(x.expiry) : (x.expRaw || "—") }), el("td", { text: dayText }),
+      el("td", {}, dot(st.lv), st.t),
+      el("td", { text: x.attend ? fmtDate(x.attend) : (x.attRaw || "—") }), el("td", { text: x.po || "—" }), el("td", {}, load)));
+  });
+  ledEls.list.replaceChildren(...listHead, bar, led.listCollapsed
+    ? el("div", { class: "muted", style: "padding:var(--sp-sm) 0", text: "목록을 접었습니다. '목록 펼치기 ▼'를 누르세요." })
+    : el("div", { class: "table-wrap led-scroll" }, el("table", { class: "led" }, el("caption", { class: "sr-only", text: "관리대장 선박 목록" }), el("thead", {}, thead), tbody)));
+}
+function dayLabel(days) { return days === null ? "만료일 확인 필요" : days <= 0 ? (days === 0 ? "오늘 만료" : `${-days}일 지남`) : `만료까지 ${days}일`; }
+function boardStage(x) {
+  const m = boardMoves[x.key];
+  if (!m) return { stage: x.auto, manual: false };
+  if (x.auto > m.autoAt) return { stage: x.auto, manual: false }; // 관리대장이 더 앞으로 진행됨 → 자동 분류를 따름
+  return { stage: m.stage, manual: true };
+}
+let boardSaveFailed = false;
+let taskSeq = 0;
+function boardMove(x, to, focusSel) {
+  if (to === x.auto) delete boardMoves[x.key]; else boardMoves[x.key] = { stage: to, autoAt: x.auto };
+  boardSaveFailed = !boardSave(boardMoves);
+  ledRender();
+  const card = [...ledEls.list.querySelectorAll(".kcard")].find(n => n.dataset.key === x.key);
+  const target = card && (card.querySelector(focusSel) || card.querySelector("button"));
+  if (target) target.focus();
+}
+function ledRenderBoard(all, expNote) {
+  const doneCount = all.filter(x => x.finished).length;
+  const items = all.filter(x => led.showDone || !x.finished)
+    .map(x => Object.assign({}, x, boardStage(x)))
+    .sort((a, b) => (a.days === null ? Infinity : a.days) - (b.days === null ? Infinity : b.days));
+  const toggle = el("input", { type: "checkbox", id: "ledShowDone" });
+  toggle.checked = led.showDone;
+  toggle.addEventListener("change", () => { led.showDone = toggle.checked; ledRender(); });
+  const manualCount = items.filter(x => x.manual).length;
+  const bar = el("div", { class: "led-bar" },
+    el("span", { text: `${managerLabel()}보드 ${items.length}척${doneCount ? ` · 끝난 건 ${doneCount}척 ${led.showDone ? "포함" : "숨김"}` : ""}${manualCount ? ` · 직접 옮긴 카드 ${manualCount}개` : ""}` }),
+    el("div", { class: "check" }, toggle, el("label", { for: "ledShowDone", text: "끝난 건도 보기 (비고 \"수금완료\" + 구품 회수 완료)" })));
+  const warn = boardSaveFailed ? el("div", { class: "banner lv-warning", role: "alert" }, "직접 옮긴 칸·할 일 체크를 이 브라우저에 저장하지 못했습니다. 창을 닫으면 사라집니다.") : null;
+  const lanes = LANES.map((ln, i) => {
+    const mine = items.filter(x => x.stage === i);
+    const hid = "lane-h-" + i;
+    const list = el("ul", { "aria-labelledby": hid });
+    mine.forEach(x => {
+      const st = ledStage(x.days);
+      const acts = el("div", { class: "acts" });
+      const load = el("button", { type: "button", class: "btn btn-secondary", "data-act": "load", text: "불러오기", "aria-label": `${x.vessel} 입력 칸에 불러오기` });
+      load.addEventListener("click", () => ledLoadRow(x));
+      acts.append(load);
+      if (i > 0) { const b = el("button", { type: "button", class: "btn btn-secondary", "data-act": "prev", text: "◀ 이전", "aria-label": `${x.vessel}을(를) ${LANES[i - 1].t}(으)로 옮기기` }); b.addEventListener("click", () => boardMove(x, i - 1, "[data-act=prev]")); acts.append(b); }
+      // 할 일 체크리스트 (v6)
+      const tl = TASKS[i], chk = taskChecks[x.key] || {};
+      const st8 = tl.map(t => { const liveF1 = t.id === "f1" && led.source === "live" && !!live.url && !x.paidOk; const a = t.auto ? !!t.auto(x) : false; return { t, auto: a, liveF1, done: liveF1 ? !!x.doneMailed : (a || !!chk[t.id]) }; });
+      const doneN = st8.filter(s => s.done).length, allDone = doneN === tl.length;
+      const warns = [];
+      // v7: PO 미등록은 모든 단계에서 경고, 방선 후 30일 지나 구품 미도착이면 경고
+      if (led.map.po !== undefined && isNoPo(x.po)) warns.push({ lv: "warning", t: "PO 미등록 — 인보이스 Hold" });
+      const overdue = x.doneDate && !isReturned(x.returned) ? daysBetween(x.doneDate, new Date()) : -1;
+      if (overdue >= RETURN_AFTER_DAYS) warns.push({ lv: "error", t: `구품 미반납 D+${overdue} (방선 ${fmtDate(x.doneDate)}) — [불러오기] 후 "구품 반납" 메일` });
+      const det = el("details", { class: "tasks" });
+      if (openTasks.has(x.key)) det.open = true;
+      det.addEventListener("toggle", () => { if (det.open) openTasks.add(x.key); else openTasks.delete(x.key); });
+      const pct = Math.round(doneN / tl.length * 100);
+      det.append(el("summary", { "aria-label": `${x.vessel} 할 일 ${tl.length}개 중 ${doneN}개 완료` }, `할 일 ${doneN}/${tl.length} `,
+        el("span", { class: "prog" + (allDone ? " full" : ""), "aria-hidden": "true" }, el("span", { style: `width:${pct}%` }))));
+      st8.forEach(s => {
+        const id = "tk-" + (taskSeq++);
+        const cb = el("input", { type: "checkbox", id, "data-task": s.t.id });
+        cb.checked = s.done; cb.disabled = s.auto && !s.liveF1;
+        cb.addEventListener("change", async () => {
+          if (s.liveF1) { // 완료 보고 발송 체크 → 시트 D열 빨강 (해제하면 되돌림)
+            const want = cb.checked; cb.disabled = true;
+            try {
+              await writeDoneMail(x, want);
+              led.doneRows = (led.doneRows || []).filter(n => n !== x.rowNo); if (want) led.doneRows.push(x.rowNo);
+            } catch (err) { cb.checked = !want; cb.disabled = false; alert("시트 반영 실패: " + (err.message || err) + "\n시트는 바뀌지 않았습니다."); return; }
+            ledRender();
+            const card0 = [...ledEls.list.querySelectorAll(".kcard")].find(n => n.dataset.key === x.key);
+            const again0 = card0 && card0.querySelector(`input[data-task="${s.t.id}"]`); if (again0) again0.focus();
+            return;
+          }
+          const o = taskChecks[x.key] || (taskChecks[x.key] = {});
+          if (cb.checked) o[s.t.id] = true; else delete o[s.t.id];
+          if (!Object.keys(o).length) delete taskChecks[x.key];
+          try { localStorage.setItem(TASK_STORE, JSON.stringify(taskChecks)); } catch { boardSaveFailed = true; }
+          ledRender();
+          const card = [...ledEls.list.querySelectorAll(".kcard")].find(n => n.dataset.key === x.key);
+          const again = card && card.querySelector(`input[data-task="${s.t.id}"]`); if (again) again.focus();
+        });
+        const warnText = s.t.warn && !s.done ? s.t.warn(x) : "";
+        if (warnText && overdue < RETURN_AFTER_DAYS) warns.push({ lv: "warning", t: warnText.replace("관리대장 ", "") });
+        det.append(el("div", { class: "check" }, cb, el("label", { for: id },
+          s.t.t + (s.auto ? " (관리대장)" : s.liveF1 ? " (시트 D열 빨강 동기화)" : ""), s.t.note && !s.done ? el("span", { class: "hint", text: s.t.note }) : null,
+          warnText ? el("span", { class: "hint" }, dot("warning"), warnText) : null)));
+      });
+      // v9: ② "기항지·일정 확정"을 체크하면 관리대장(구글 시트)에 반영하는 칸
+      if (i === 1 && st8.some(s => s.t.id === "s1" && s.done)) det.append(schedulePanel(x));
+      if (i < LANES.length - 1) { const b = el("button", { type: "button", class: "btn " + (allDone ? "btn-primary" : "btn-secondary"), "data-act": "next", text: "다음 ▶", "aria-label": `${x.vessel}을(를) ${LANES[i + 1].t}(으)로 옮기기` }); b.addEventListener("click", () => boardMove(x, i + 1, "[data-act=next]")); acts.append(b); }
+      if (x.manual) { const b = el("button", { type: "button", class: "btn btn-secondary", "data-act": "auto", text: "자동 분류로", "aria-label": `${x.vessel}을(를) 자동 분류 칸(${LANES[x.auto].t})으로 되돌리기` }); b.addEventListener("click", () => boardMove(x, x.auto, "[data-act=load]")); acts.append(b); }
+      const where = [x.port, x.country].filter(Boolean).join(" / ");
+      const li = el("li", { class: "kcard" },
+        el("div", { class: "name", text: x.vessel }),
+        el("div", { class: "meta", text: [where || "항구 미정", x.attend ? "승선 " + fmtDate(x.attend) : x.attRaw ? "승선 " + x.attRaw : "", x.po ? "PO " + x.po : ""].filter(Boolean).join(" · ") }),
+        el("div", { class: "exp" }, dot(st.lv), `${x.days === null ? "" : st.t + " · "}${dayLabel(x.days)}${x.expiry ? ` (${fmtDate(x.expiry)}, ${x.expSrc})` : ""}`),
+        x.manual ? el("div", { class: "meta", text: `직접 옮김 — 자동 분류는 ${LANES[x.auto].t}` }) : null,
+        x.finished ? el("div", { class: "meta", text: "끝난 건 (수금완료 · 구품 회수 완료)" }) : null,
+        ...warns.map(w => el("div", { class: "exp" }, dot(w.lv), w.t)),
+        det,
+        allDone ? el("div", { class: "exp" }, dot("success"), i < LANES.length - 1 ? "이 단계 할 일 완료 — [다음 ▶]로 옮기세요" : "모든 할 일 완료") : null,
+        acts);
+      li.dataset.key = x.key;
+      list.append(li);
+    });
+    return el("section", { class: "lane", "aria-labelledby": hid },
+      el("h3", { id: hid, text: `${ln.t} (${mine.length})` }), el("p", { class: "lane-desc", text: ln.d }),
+      mine.length ? list : el("div", { class: "state", text: "이 단계의 선박이 없습니다." }));
+  });
+  const legend = el("div", { class: "legend", role: "note", "aria-label": "색 점 기준" },
+    el("strong", { text: "색 점 기준 (센서 만료까지 남은 기간)" }),
+    el("span", {}, dot("error"), "만료 (지남·오늘)"),
+    el("span", {}, dot("warning"), `방향 잡기 (${RULES.expiryDecideDays}일 이하)`),
+    el("span", {}, dot("info"), `스케줄링 (${RULES.expiryDecideDays + 1}~${RULES.expiryScheduleDays}일) · 연락 시작 (${RULES.expiryScheduleDays + 1}~${RULES.expiryContactDays}일)`),
+    el("span", {}, dot("success"), `아직 시기 아님 (${RULES.expiryContactDays + 1}일 이상)`),
+    el("span", {}, dot("inactive"), "만료일 확인 필요"));
+  ledEls.list.replaceChildren(...[expNote, warn].filter(Boolean), legend, bar, el("div", { class: "board" }, ...lanes));
+}
+// 담당자로 보기 (v6) — 화면 거르기만. 한 칸에 여러 이름이 있으면 쉼표·슬래시로 나눔
+function splitNames(v) { return String(v || "").split(/[,/]/).map(s => s.trim()).filter(Boolean); }
+function managerLabel() { return led.map.manager !== undefined && led.manager ? `담당자 ${led.manager} · ` : ""; }
+function ledBuildManagerUi(items) {
+  if (led.map.manager === undefined) { ledEls.managerBox.hidden = true; return; }
+  const count = new Map();
+  items.forEach(x => splitNames(x.manager).forEach(n => count.set(n, (count.get(n) || 0) + 1)));
+  if (led.manager && !count.has(led.manager)) count.set(led.manager, 0);
+  const names = [...count.keys()].sort((a, b) => a.localeCompare(b, "ko"));
+  ledEls.manager.replaceChildren(el("option", { value: "", text: `전체 담당자 (${items.length}척)` }),
+    ...names.map(n => el("option", { value: n, text: `${n} (${count.get(n)}척${count.get(n) ? "" : " — 이 파일에 없음"})` })));
+  ledEls.manager.value = led.manager;
+  ledEls.managerBox.hidden = false;
+}
+// Outlook 규칙 문구 (v8, 방식 A) — 메일은 읽지 않고, 규칙에 붙여 넣을 단어 목록만 만듦
+const ruleEls = { box: document.getElementById("ledRule"), out: document.getElementById("ruleOut"),
+  open: document.getElementById("ruleOpenOnly"), po: document.getElementById("rulePo"), owner: document.getElementById("ruleOwner") };
+let ruleItems = [];
+function ledRenderRule(items) {
+  ruleItems = items; ruleEls.box.hidden = false;
+  const src = ruleEls.open.checked ? items.filter(x => !x.finished) : items;
+  const uniq = arr => [...new Set(arr.map(s => s.trim()).filter(Boolean))].sort();
+  const vessels = uniq(src.map(x => cleanVessel(x.vessel)));
+  const pos = ruleEls.po.checked ? uniq(src.flatMap(x => String(x.po || "").split(/[,;\n]+/)).filter(p => !isNoPo(p))) : [];
+  const owners = ruleEls.owner.checked ? uniq(src.map(x => x.owner)) : [];
+  const words = [...vessels, ...pos, ...owners];
+  const who = led.map.manager !== undefined && led.manager ? led.manager : "";
+  const folder = `BWTS MRO - ${who || "전체"}`;
+  const short = words.filter(w => w.replace(/\s/g, "").length < 4);
+  const out = [];
+  if (!who && led.map.manager !== undefined) out.push(el("div", { class: "banner lv-warning", role: "status" }, "담당자를 고르지 않아 전체 선박이 들어갑니다. 위 \"담당자로 보기\"에서 담당자를 먼저 고르세요."));
+  out.push(el("p", { text: `${who ? `담당자 ${who}` : "전체"} — 선박 ${vessels.length}척${pos.length ? `, PO ${pos.length}개` : ""}${owners.length ? `, 고객사 ${owners.length}곳` : ""} · 단어 ${words.length}개` }));
+  if (!words.length) { out.push(el("div", { class: "state", text: "넣을 단어가 없습니다." })); ruleEls.out.replaceChildren(...out); return; }
+  if (short.length) out.push(el("div", { class: "banner lv-warning" }, `짧은 단어는 엉뚱한 메일까지 분류할 수 있습니다: ${short.join(", ")}`));
+  const mkCopy = (label, text) => { const b = el("button", { type: "button", class: "btn btn-secondary", text: label + " 복사" }); b.addEventListener("click", () => copyText(text, b, label)); return b; };
+  out.push(el("div", { class: "box-label" }, el("span", { text: "전체 단어 (모든 선사)" }),
+    el("span", { class: "samples", style: "margin:0" }, mkCopy("전체 한 줄씩", words.join("\n")), mkCopy("전체 세미콜론(;) 구분", words.join("; ")))));
+  // 선사(고객사)별 구분 (v8 사용자 요청) — 선사마다 따로 복사해 선사별 폴더·규칙을 만들 수 있게
+  const groups = new Map();
+  src.forEach(x => { const k = (x.owner || "").trim() || "(고객사 미기재)"; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(x); });
+  [...groups.keys()].sort((a, b) => a.localeCompare(b, "ko")).forEach(k => {
+    const g = groups.get(k);
+    const gv = uniq(g.map(x => cleanVessel(x.vessel)));
+    const gp = ruleEls.po.checked ? uniq(g.flatMap(x => String(x.po || "").split(/[,;\n]+/)).filter(p => !isNoPo(p))) : [];
+    const gw = [...gv, ...gp, ...(ruleEls.owner.checked && k !== "(고객사 미기재)" ? [k] : [])];
+    out.push(el("section", { class: "draft" },
+      el("div", { class: "draft-head" },
+        el("div", {}, el("div", { class: "draft-title", text: k }), el("div", { class: "muted", text: `선박 ${gv.length}척${gp.length ? ` · PO ${gp.length}개` : ""} · 폴더 예: ${folder} - ${k}` })),
+        el("span", { class: "samples", style: "margin:0" }, mkCopy("한 줄씩", gw.join("\n")), mkCopy("세미콜론(;)", gw.join("; ")))),
+      el("pre", { class: "body", text: gw.join("\n") })));
+  });
+  out.push(el("div", { class: "verify" }, el("div", { class: "label", text: "Outlook에서 규칙 만들기 (메뉴 이름은 Outlook 버전에 따라 조금 다를 수 있습니다)" }),
+    el("ol", { class: "ai-list" },
+      el("li", { text: `받은편지함 아래에 폴더 "${folder}"를 만듭니다.` }),
+      el("li", { text: "클래식 Outlook: 파일 → 규칙 및 알림 관리 → 새 규칙 → \"받은 메시지에 규칙 적용\" → 조건 \"제목이나 본문에 특정 단어가 포함된 경우\" → 위 단어 입력 → 동작 \"지정한 폴더로 이동\"." }),
+      el("li", { text: "새 Outlook·웹: 설정 → 메일 → 규칙 → 새 규칙 → 조건 \"제목 또는 본문에 다음 포함\" → 위 단어 입력 → 동작 \"폴더로 이동\"." }),
+      el("li", { text: "한 번에 붙여 넣기가 안 되면 한 줄씩 넣으세요. 관리대장이 바뀌면 이 목록을 다시 만들어 규칙의 단어를 바꿉니다." }))));
+  ruleEls.out.replaceChildren(...out);
+}
+[ruleEls.open, ruleEls.po, ruleEls.owner].forEach(c => c.addEventListener("change", () => ledRenderRule(ruleItems)));
+ledEls.manager.addEventListener("change", () => {
+  led.manager = ledEls.manager.value;
+  try { if (led.manager) localStorage.setItem(MANAGER_STORE, led.manager); else localStorage.removeItem(MANAGER_STORE); } catch { /* 저장이 막힌 환경: 이번 화면에서만 적용 */ }
+  ledRender();
+});
+ledEls.view.addEventListener("click", e => {
+  const b = e.target.closest("button[data-view]"); if (!b) return;
+  led.view = b.dataset.view; ledRender();
+  const again = ledEls.view.querySelector(`[data-view=${led.view}]`); if (again) again.focus();
+});
+ledEls.refFile.addEventListener("change", async () => {
+  ledRef.byVessel = null; ledEls.refStatus.textContent = "";
+  const f = ledEls.refFile.files[0];
+  if (!f) { ledRender(); return; }
+  const res = await readCsvFile(f);
+  if (res.error) { ledEls.refStatus.textContent = res.error; ledEls.refFile.value = ""; ledRender(); return; }
+  if (!ledSetRef(res.rows, res.year, f.name)) ledEls.refFile.value = "";
+  ledRender();
+});
+// 작년 시트 행 → 선명별 만료일 (CSV 파일·구글 시트 실시간 공통, v9)
+function ledSetRef(rows, fileYear, label) {
+  ledRef.byVessel = null;
+  const header = ledGuessHeader(rows), g = guessMap(rows[header] || []);
+  if (g.map.vessel === undefined || g.map.expiry === undefined) {
+    ledEls.refStatus.textContent = "작년 시트에서 선명 열과 승선 일자(R열) 열을 찾지 못했습니다. 2025 시트인지 확인하세요.";
+    return false;
+  }
+  const res = { rows, year: fileYear };
+  const year = res.year || led.year - 1, by = new Map();
+  let unread = 0;
+  for (const r of res.rows.slice(header + 1)) {
+    const v = normVessel(r[g.map.vessel]); if (!v) continue;
+    let d = parseLooseDate(String(r[g.map.expiry] ?? "").trim(), year);
+    if (!d) { unread++; continue; }
+    if (g.plusYear) d = addOneYear(d);
+    if (!by.has(v) || by.get(v) < d) by.set(v, d); // 같은 배가 여러 번이면 가장 늦은 날짜
+  }
+  ledRef.byVessel = by;
+  ledEls.refStatus.textContent = `${label} — ${by.size}척의 만료일을 읽었습니다 (선명 ${colName(g.map.vessel)}열, 만료일 = ${colName(g.map.expiry)}열${g.plusYear ? " + 1년" : ""}, 연도 ${year}${res.year ? "" : " — 이름에 연도가 없어 추정"})${unread ? ` · 날짜를 읽지 못한 줄 ${unread}개` : ""}`;
+  return true;
+}
+ledEls.headerSel.addEventListener("change", () => {
+  led.header = +ledEls.headerSel.value; led.start = led.header + 1;
+  ledGuessMap(); ledBuildMapUi(); ledRender();
+});
+ledEls.start.addEventListener("change", () => {
+  const n = Math.round(+ledEls.start.value);
+  led.start = Number.isFinite(n) && n > led.header + 1 ? n - 1 : led.header + 1;
+  ledEls.start.value = String(led.start + 1);
+  ledRender();
+});
+ledEls.plusYear.addEventListener("change", () => { led.plusYear = ledEls.plusYear.checked; ledRender(); });
+ledEls.year.addEventListener("change", () => {
+  const y = Math.round(+ledEls.year.value);
+  if (y >= 2000 && y <= 2100) led.year = y;
+  ledEls.year.value = String(led.year);
+  ledRender();
+});
+ledEls.file.addEventListener("change", async () => {
+  led.rows = []; ledEls.map.hidden = true; ledEls.view.hidden = true; ledEls.list.replaceChildren(); ledEls.status.textContent = "";
+  const f = ledEls.file.files[0];
+  if (!f) return;
+  const res = await readCsvFile(f);
+  if (res.error) { ledEls.status.textContent = res.error; ledEls.file.value = ""; return; }
+  ledSetMain(res.rows, res.year, `${f.name} — ${res.rows.length}줄을 읽었습니다.`, false);
+});
+// 올해 시트 행 → 목록·보드 (CSV 파일·구글 시트 실시간 공통, v9). keep = 새로고침 때 보기·정렬 유지
+function ledSetMain(rows, year, statusText, keep, source, doneRows) {
+  led.source = source || "file"; // "live" = 구글 시트에서 읽음 (시트에 반영 가능)
+  led.doneRows = Array.isArray(doneRows) ? doneRows : []; // 시트 D열 빨강 행 (완료 보고 발송 표식, v10) — CSV면 비움
+  // 새로고침(keep)이고 제목 줄이 그대로면, 직접 고친 열 연결·시작 행·연도·+1년 설정을 유지 (자동 추정으로 되돌리지 않음)
+  const sig = r => JSON.stringify((r || []).map(c => String(c).trim()));
+  const same = keep && led.headSig && rows[led.header] && sig(rows[led.header]) === led.headSig;
+  led.rows = rows;
+  if (same) { if (led.start >= rows.length) led.start = led.header + 1; }
+  else {
+    led.header = ledGuessHeader(rows); led.start = led.header + 1;
+    led.year = year || new Date().getFullYear();
+    ledGuessMap();
+  }
+  led.headSig = sig(rows[led.header]);
+  if (!keep) { led.sortKey = "days"; led.sortDir = 1; led.showAll = false; }
+  ledBuildMapUi();
+  ledEls.map.hidden = false;
+  ledEls.status.textContent = statusText;
+  ledRender();
+  if (!keep) { const _s = document.getElementById("ledSetup"); if (_s) _s.open = false; } // 불러오면 연결·설정 자동 접기
+}
+
+/* =====================================================================
+   7. 구글 시트 실시간 불러오기 (v9) — 관리대장 시트에 붙인 Apps Script 웹 앱(읽기 전용 통로)
+   - 연결 파일: secrets/ledger_link.txt (1줄: 웹 앱 주소, 2줄: 토큰) — 열 때마다 고름, 메모리에만 둠
+   - 토큰은 주소창(URL)이 아니라 요청 본문으로 보냄
+   ===================================================================== */
+const LIVE_SHEETS = { main: "2026", ref: "2025" }; // 탭 이름 (사용자 확인 2026-11-09)
+const live = { url: "", token: "", busy: false, last: 0 };
+const LIVE_AUTO_MS = 5 * 60 * 1000; // 자동 새로고침 간격 5분 (사용자 확인 2026-11-10)
+let liveTimer = null;
+const liveEls = { auto: document.getElementById("liveAuto"), next: document.getElementById("liveNext"),
+  file: document.getElementById("liveFile"), run: document.getElementById("liveRun"), status: document.getElementById("liveStatus"),
+  tokenBtn: document.getElementById("liveTokenNew"), tokenOut: document.getElementById("liveTokenOut") };
+liveEls.file.addEventListener("change", async () => {
+  live.url = ""; live.token = ""; liveEls.run.disabled = true; liveEls.status.textContent = ""; liveSchedule();
+  const f = liveEls.file.files[0]; if (!f) return;
+  if (f.size > 4096 || (f.name.includes(".") && !/\.txt$/i.test(f.name))) { liveEls.status.textContent = "연결 파일 형식이 아닙니다. 두 줄(주소, 토큰)만 든 .txt 파일을 고르세요."; liveEls.file.value = ""; return; }
+  const lines = (await f.text()).replace(/^﻿/, "").split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+  const url = lines[0] || "", token = lines[1] || "";
+  if (!/^https:\/\/script\.google\.com\/[\w.\/-]+\/exec$/.test(url)) { liveEls.status.textContent = "1줄이 Apps Script 웹 앱 주소(https://script.google.com/macros/s/…/exec)가 아닙니다."; liveEls.file.value = ""; return; }
+  if (token.length < 24 || /\s/.test(token)) { liveEls.status.textContent = "2줄 토큰이 너무 짧거나 공백이 있습니다 (24자 이상)."; liveEls.file.value = ""; return; }
+  live.url = url; live.token = token; liveEls.run.disabled = false;
+  liveRememberSave();
+  liveEls.status.textContent = "연결 파일을 불러왔습니다 (토큰은 화면에 표시하지 않습니다). [관리대장 새로고침]을 누르세요.";
+  liveRefresh();
+});
+// 연결 정보 기억 (사용자 선택, 기본 꺼짐 — 2026-11-10 사용자 요청)
+const LIVE_STORE = "bwtsMroLink.v1";
+const liveRememberEl = document.getElementById("liveRemember"), liveForgetEl = document.getElementById("liveForget");
+function liveRememberSave() {
+  try {
+    if (liveRememberEl.checked && live.url) localStorage.setItem(LIVE_STORE, JSON.stringify({ url: live.url, token: live.token }));
+    else localStorage.removeItem(LIVE_STORE);
+  } catch { if (liveRememberEl.checked) liveEls.status.textContent = "이 브라우저에서는 연결 정보를 기억할 수 없습니다 (저장소 차단)."; }
+}
+liveRememberEl.addEventListener("change", liveRememberSave);
+liveForgetEl.addEventListener("click", () => {
+  try { localStorage.removeItem(LIVE_STORE); } catch { /* 저장소 차단 */ }
+  liveRememberEl.checked = false;
+  live.url = ""; live.token = ""; liveEls.run.disabled = true; liveEls.file.value = ""; liveSchedule();
+  liveEls.status.textContent = "연결 정보를 지웠습니다. 다시 연결하려면 연결 파일을 고르세요. (불러온 관리대장 화면은 그대로)";
+});
+// 열 때 기억된 연결 정보가 있으면 자동 연결 (스크립트가 모두 준비된 뒤 실행)
+setTimeout(() => {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(LIVE_STORE) || "null"); } catch { saved = null; }
+  if (saved && /^https:\/\/script\.google\.com\/[\w.\/-]+\/exec$/.test(saved.url || "") && String(saved.token || "").length >= 24) {
+    live.url = saved.url; live.token = saved.token; liveRememberEl.checked = true; liveEls.run.disabled = false;
+    liveEls.status.textContent = "기억된 연결 정보로 연결합니다…";
+    liveRefresh();
+  }
+}, 0);
+const hhmm = d => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+// 다음 자동 새로고침 예약 (연결돼 있고 체크가 켜져 있을 때만)
+function liveSchedule(delay) {
+  clearTimeout(liveTimer); liveTimer = null;
+  if (!live.url) { liveEls.next.textContent = ""; return; }
+  if (!liveEls.auto.checked) { liveEls.next.textContent = "꺼짐 — [관리대장 새로고침] 버튼을 눌러 직접 새로고침하세요"; return; }
+  const ms = delay ?? LIVE_AUTO_MS;
+  liveTimer = setTimeout(liveAutoTick, ms);
+  liveEls.next.textContent = `다음 자동 새로고침 ${hhmm(new Date(Date.now() + ms))}`;
+}
+// 관리대장 화면(칸·버튼·체크박스)을 쓰는 중이면 방해하지 않게 30초 뒤 다시 시도
+function liveAutoTick() {
+  const a = document.activeElement, box = document.querySelector(".ledger");
+  if (a && a !== document.body && box && box.contains(a) && a !== liveEls.run && a !== liveEls.auto) { liveSchedule(30000); return; }
+  liveRefresh(true);
+}
+liveEls.auto.addEventListener("change", () => liveSchedule());
+// 다른 창을 보다가 돌아왔을 때 5분이 지났으면 바로 새로고침 (숨은 창에서는 브라우저가 타이머를 늦출 수 있음)
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && live.url && liveEls.auto.checked && Date.now() - live.last > LIVE_AUTO_MS) liveAutoTick();
+});
+async function liveRefresh(auto) {
+  if (!live.url || live.busy) return;
+  live.busy = true; liveEls.run.disabled = true; liveEls.status.textContent = auto === true ? "자동 새로고침 중…" : "구글 시트에서 불러오는 중…";
+  try {
+    const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 30000);
+    // text/plain 본문 = 브라우저 사전 확인 없이 보내는 단순 요청 (Apps Script 웹 앱 호환)
+    const res = await fetch(live.url, { method: "POST", body: JSON.stringify({ token: live.token, sheets: [LIVE_SHEETS.main, LIVE_SHEETS.ref] }), headers: { "Content-Type": "text/plain;charset=utf-8" }, signal: ctrl.signal });
+    clearTimeout(timer);
+    const data = await res.json().catch(() => null);
+    if (!data) throw new Error("응답을 읽지 못했습니다 (웹 앱 배포 설정·권한을 확인하세요).");
+    if (!data.ok) throw new Error(data.error === "unauthorized" ? "토큰이 맞지 않습니다. Apps Script의 TOKEN 속성과 연결 파일 2줄을 확인하세요." : "구글 시트 오류: " + String(data.error || "알 수 없음").slice(0, 200));
+    const sh = data.sheets || {}, main = sh[LIVE_SHEETS.main], ref = sh[LIVE_SHEETS.ref];
+    if (!Array.isArray(main) || main.length < 2) throw new Error(`"${LIVE_SHEETS.main}" 탭을 찾지 못했습니다.`);
+    const toRows = a => a.map(r => r.map(c => String(c ?? "")));
+    const at = new Date();
+    const when = `${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")}`;
+    if (Array.isArray(ref) && ref.length > 1) ledSetRef(toRows(ref), +LIVE_SHEETS.ref, `구글 시트 "${LIVE_SHEETS.ref}" 탭`);
+    else { ledRef.byVessel = null; ledEls.refStatus.textContent = `구글 시트에 "${LIVE_SHEETS.ref}" 탭이 없어 작년 만료일을 쓰지 않습니다.`; }
+    ledSetMain(toRows(main), +LIVE_SHEETS.main, `구글 시트 "${LIVE_SHEETS.main}" 탭 — ${main.length}줄 (${when} 기준 최신)`, led.rows.length > 0, "live", data.doneRows);
+    liveEls.status.textContent = `${when} ${auto === true ? "자동 " : ""}새로고침 완료 — ${String(data.title || "관리대장").slice(0, 60)}`;
+    live.last = Date.now();
+  } catch (err) {
+    liveEls.status.textContent = err.name === "AbortError" ? "응답이 30초 넘게 없어 중단했습니다. 잠시 뒤 다시 누르세요."
+      : err instanceof TypeError ? "구글에 연결하지 못했습니다. 인터넷 연결, 회사 네트워크 차단, 웹 앱 배포의 액세스 설정(모든 사용자)을 확인하세요."
+      : err.message;
+  } finally { live.busy = false; liveEls.run.disabled = !live.url; liveSchedule(); }
+}
+liveEls.run.addEventListener("click", () => liveRefresh(false));
+/* ===== Outlook 받은편지함 로컬 연결 (v12) — 로컬 브리지(win32com COM)가 읽은 받은편지함을 관리대장과 대조 ===== */
+const poKeyOf = po => isNoPo(po) ? "" : String(po).toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim().split(/\s+/).filter(t => /[0-9]/.test(t)).join("");
+const OLK_URL_KEY = "bwtsMroOlkUrl.v1";
+const olkEls = { url: document.getElementById("olkUrl"), run: document.getElementById("olkRun"), n: document.getElementById("olkN"), mine: document.getElementById("olkMine"), status: document.getElementById("olkStatus"), list: document.getElementById("olkList"), detail: document.getElementById("olkDetail"), work: document.getElementById("olkWork"), search: document.getElementById("olkSearch"), reset: document.getElementById("olkFReset"), count: document.getElementById("olkCount") };
+let olkLastMails = null, olkRows = [], olkSel = -1, olkAll = [], olkTbody = null, olkColFilters = {}, olkPop = null;
+try { const u = localStorage.getItem(OLK_URL_KEY); if (u) olkEls.url.value = u; } catch { /* 저장소 차단 — 기본값 */ }
+function olkMatch(text) {
+  if (!led.rows || !led.rows.length) return [];
+  const up = " " + String(text || "").toUpperCase().replace(/[^A-Z0-9가-힣]+/g, " ").trim() + " ";
+  const compact = up.replace(/\s+/g, "");
+  return ledItems().filter(x => {
+    const words = cleanVessel(x.vessel).replace(/[^A-Z0-9가-힣]+/g, " ").trim(), pk = poKeyOf(x.po);
+    return (words.length >= 4 && up.includes(" " + words + " ")) || (pk.length >= 5 && compact.includes(pk));
+  }).sort((a, b) => (a.finished - b.finished) || ((a.days ?? 1e9) - (b.days ?? 1e9)));
+}
+function olkFmtDate(s) { const d = new Date(s); return isNaN(d) ? String(s || "").slice(0, 16) : fmtDate(d); }
+// 할 일 체크 (칸반 카드와 같은 로직을 미러링 — 받은편지함 오른쪽 칸 전용)
+function olkTaskList(x) {
+  const tl = TASKS[x.auto] || [], chk = taskChecks[x.key] || {};
+  const st8 = tl.map(t => { const liveF1 = t.id === "f1" && led.source === "live" && !!live.url && !x.paidOk; const a = t.auto ? !!t.auto(x) : false; return { t, auto: a, liveF1, done: liveF1 ? !!x.doneMailed : (a || !!chk[t.id]) }; });
+  const doneN = st8.filter(s => s.done).length, pct = Math.round(doneN / tl.length * 100);
+  const det = el("details", { class: "tasks" }); det.open = true;
+  det.append(el("summary", { "aria-label": `할 일 ${tl.length}개 중 ${doneN}개 완료` }, `할 일 ${doneN}/${tl.length} `,
+    el("span", { class: "prog" + (doneN === tl.length ? " full" : ""), "aria-hidden": "true" }, el("span", { style: `width:${pct}%` }))));
+  st8.forEach(s => {
+    const id = "tko-" + (taskSeq++);
+    const cb = el("input", { type: "checkbox", id, "data-task": s.t.id });
+    cb.checked = s.done; cb.disabled = s.auto && !s.liveF1;
+    cb.addEventListener("change", async () => {
+      if (s.liveF1) {
+        const want = cb.checked; cb.disabled = true;
+        try { await writeDoneMail(x, want); led.doneRows = (led.doneRows || []).filter(n => n !== x.rowNo); if (want) led.doneRows.push(x.rowNo); x.doneMailed = want; }
+        catch (err) { cb.checked = !want; cb.disabled = false; alert("시트 반영 실패: " + (err.message || err) + "\n시트는 바뀌지 않았습니다."); return; }
+        cb.disabled = false; olkRenderDetail(); return;
+      }
+      const o = taskChecks[x.key] || (taskChecks[x.key] = {});
+      if (cb.checked) o[s.t.id] = true; else delete o[s.t.id];
+      if (!Object.keys(o).length) delete taskChecks[x.key];
+      try { localStorage.setItem(TASK_STORE, JSON.stringify(taskChecks)); } catch { /* 저장 실패 — 세션만 */ }
+      olkRenderDetail();
+    });
+    const warnText = s.t.warn && !s.done ? s.t.warn(x) : "";
+    det.append(el("div", { class: "check" }, cb, el("label", { for: id },
+      s.t.t + (s.auto ? " (관리대장)" : s.liveF1 ? " (시트 D열 빨강 동기화)" : ""),
+      warnText ? el("span", { class: "hint" }, " ⚠ " + warnText) : null)));
+  });
+  return det;
+}
+// 오른쪽 칸: 고른 메일의 선박 전체 기능
+function olkRenderDetail() {
+  const d = olkEls.detail, w = olkEls.work; d.replaceChildren(); w.replaceChildren();
+  const r = olkSel >= 0 ? olkRows[olkSel] : null;
+  if (!r) { d.append(el("div", { class: "muted", text: "메일을 고르면 그 내용·선박 기능이 여기 나옵니다." })); w.append(el("div", { class: "muted", text: "메일을 고르면 그 선박의 할 일이 여기 나옵니다." })); return; }
+  // 메일 내용 (항상 — 고른 메일의 보낸사람·제목·본문)
+  const bodyPre = el("pre", { class: "olk-body", text: r.mail.preview || "(본문 미리보기 없음)" });
+  const mailBox = el("div", { class: "olk-mailview" },
+    el("div", { class: "olk-h" }, el("span", { class: "olk-from", text: r.mail.sender || "(보낸사람 없음)" }), el("span", { class: "olk-date", text: olkFmtDate(r.mail.received) })),
+    el("div", { class: "olk-subj", text: r.mail.subject || "(제목 없음)" }),
+    bodyPre);
+  if (r.mail.id) {
+    const full = el("button", { type: "button", class: "btn btn-secondary", text: "전체 본문 보기" });
+    full.addEventListener("click", async () => {
+      full.disabled = true; full.textContent = "불러오는 중…";
+      try {
+        const base = olkEls.url.value.trim().replace(/\/+$/, "");
+        const res = await fetch(base + "/mail?id=" + encodeURIComponent(r.mail.id));
+        const data = await res.json().catch(() => null);
+        if (!data || !data.ok) throw new Error((data && data.error) || "브리지 오류");
+        bodyPre.textContent = data.body || "(본문 없음)"; full.remove();
+      } catch (e) { full.disabled = false; full.textContent = "전체 본문 보기 (다시)"; bodyPre.textContent = "본문을 불러오지 못했습니다 (" + (e.message || e) + ").\n\n" + bodyPre.textContent; }
+    });
+    mailBox.append(full);
+  }
+  d.append(mailBox);
+  // 대조된 선박: 선박 정보·오더 검토·일정 확정 → 오른쪽(메일 아래), 할 일만 → 메일 목록 아래(왼쪽)
+  const x = r.item;
+  if (!x) { d.append(el("div", { class: "muted", text: "이 메일과 대조되는 선박이 관리대장에 없습니다." })); return; }
+  d.append(el("div", { class: "olk-dh" },
+    el("div", { class: "name", text: x.vessel }),
+    el("div", { class: "who", text: `담당: ${x.manager || "미지정"}${r.mineHit ? " (나)" : ""}` }),
+    el("div", { class: "row", text: [x.owner, x.po ? "PO " + x.po : "", [x.port, x.country].filter(Boolean).join(" / ")].filter(Boolean).join(" · ") }),
+    el("div", { class: "row", text: `칸반 ${LANES[x.auto].t}${x.finished ? " · 끝난 건" : ""}${x.expiry ? ` · 센서 만료 ${fmtDate(x.expiry)}${x.days === null ? "" : x.days <= 0 ? ` (${-x.days}일 지남)` : ` (${x.days}일 남음)`}` : ""}` })));
+  if (led.map.po !== undefined && isNoPo(x.po)) d.append(el("div", { class: "olk-warn", text: "⚠ PO 미등록 — 인보이스 Hold" }));
+  const od = x.doneDate && !isReturned(x.returned) ? daysBetween(x.doneDate, new Date()) : -1;
+  if (od >= RETURN_AFTER_DAYS) d.append(el("div", { class: "olk-warn", text: `⚠ 구품 미반납 D+${od} (방선 ${fmtDate(x.doneDate)})` }));
+  const btn = el("button", { type: "button", class: "btn btn-primary", text: "이 선박 오더 검토 · 메일 초안 ▸" });
+  btn.addEventListener("click", () => ledLoadRow(x));
+  d.append(btn, el("div", { class: "hint", text: "누르면 '2. 검토 결과'에 경고·메일 초안이 나옵니다." }));
+  if (led.source === "live" && live.url) d.append(schedulePanel(x));
+  w.append(olkTaskList(x));
+}
+function olkSelectIdx(i) {
+  olkSel = i;
+  if (olkTbody) [...olkTbody.children].forEach((n, idx) => { if (n.classList) n.classList.toggle("sel", idx === i); });
+  olkRenderDetail();
+}
+// 목록 열 정의 (val = 각 행의 그 열 표시값)
+const OLK_COLS = [
+  { key: "vessel", label: "선박", filter: true, val: r => r.item ? r.item.vessel : "(대조 없음)" },
+  { key: "owner", label: "선사", filter: true, val: r => r.item ? (r.item.owner || "(선사 미기재)") : "(대조 없음)" },
+  { key: "manager", label: "담당", filter: true, val: r => r.item ? (r.item.manager || "(미지정)") : "(대조 없음)" },
+  { key: "stage", label: "단계", filter: true, val: r => r.item ? LANES[r.item.auto].t : "(대조 없음)" },
+  { key: "subject", label: "제목", filter: false, cls: "subj", val: r => r.mail.subject || "(제목 없음)" },
+  { key: "date", label: "날짜", filter: false, val: r => olkFmtDate(r.mail.received) }
+];
+function olkClosePop() { if (olkPop) { olkPop.remove(); olkPop = null; } }
+document.addEventListener("click", e => { if (olkPop && !olkPop.contains(e.target) && !(e.target.classList && e.target.classList.contains("olk-fbtn"))) olkClosePop(); });
+function olkRenderList(mails) {
+  olkLastMails = mails;
+  const me = (led.map.manager !== undefined && led.manager) ? led.manager : "";
+  olkAll = mails.map(m => {
+    const hits = olkMatch((m.subject || "") + "\n" + (m.preview || "")), item = hits[0] || null;
+    return { mail: m, item, mineHit: !!(me && hits.some(h => splitNames(h.manager).includes(me))) };
+  });
+  olkColFilters = {}; olkClosePop(); // 새로 불러오면 열 필터 초기화
+  olkRenderTable();
+}
+function olkRenderTable() {
+  olkEls.list.replaceChildren(); olkTbody = null;
+  if (!olkAll.length) { olkEls.list.append(el("div", { class: "muted", text: "받은편지함에서 가져온 메일이 없습니다." })); olkSel = -1; olkRenderDetail(); return; }
+  const trh = el("tr");
+  OLK_COLS.forEach(c => {
+    const th = el("th", {}, c.label);
+    if (c.filter) {
+      const b = el("button", { type: "button", class: "olk-fbtn", "data-col": c.key, title: c.label + " 필터" }, "▼");
+      b.addEventListener("click", e => { e.stopPropagation(); olkOpenPop(c, b); });
+      th.append(b);
+    }
+    trh.append(th);
+  });
+  const tbody = el("tbody", {});
+  olkEls.list.append(el("table", { class: "olk-table" }, el("thead", {}, trh), tbody));
+  olkTbody = tbody;
+  olkApplyFilters();
+}
+function olkApplyFilters() {
+  if (!olkTbody) return;
+  const me = (led.map.manager !== undefined && led.manager) ? led.manager : "", onlyMine = olkEls.mine.checked && me;
+  const q = (olkEls.search.value || "").trim().toLowerCase();
+  olkRows = olkAll.filter(r => {
+    if (onlyMine && !r.mineHit) return false;
+    for (const c of OLK_COLS) { if (c.filter && olkColFilters[c.key] && !olkColFilters[c.key].has(c.val(r))) return false; }
+    if (q) { const hay = ((r.mail.subject || "") + " " + (r.mail.sender || "") + " " + (r.item ? r.item.vessel + " " + (r.item.owner || "") + " " + (r.item.manager || "") : "")).toLowerCase(); if (!hay.includes(q)) return false; }
+    return true;
+  });
+  olkEls.list.querySelectorAll(".olk-fbtn").forEach(b => b.classList.toggle("active", !!olkColFilters[b.getAttribute("data-col")]));
+  olkTbody.replaceChildren();
+  if (olkEls.count) olkEls.count.textContent = `${olkRows.length}건`;
+  if (!olkRows.length) { olkTbody.append(el("tr", {}, el("td", { class: "muted", colspan: String(OLK_COLS.length), text: "조건에 맞는 메일이 없습니다." }))); olkSel = -1; olkRenderDetail(); return; }
+  olkRows.forEach((r, idx) => {
+    const tr = el("tr", { class: r.mineHit ? "mine" : "" });
+    OLK_COLS.forEach(c => tr.append(el("td", { class: c.cls || c.key, text: c.val(r) })));
+    tr.addEventListener("click", () => olkSelectIdx(idx));
+    olkTbody.append(tr);
+  });
+  const firstMatch = olkRows.findIndex(r => r.item);
+  olkSelectIdx(firstMatch >= 0 ? firstMatch : 0);
+}
+function olkOpenPop(c, btn) {
+  const same = olkPop && olkPop.dataset.col === c.key; olkClosePop(); if (same) return;
+  const values = [...new Set(olkAll.map(r => c.val(r)))].sort((a, b) => String(a).localeCompare(String(b), "ko"));
+  const sel = olkColFilters[c.key];
+  const pop = el("div", { class: "olk-fpop" }); pop.dataset.col = c.key;
+  const allCb = el("input", { type: "checkbox" }); allCb.checked = !sel;
+  const apply = () => {
+    const boxes = [...pop.querySelectorAll("input[data-v]")], checked = boxes.filter(x => x.checked).map(x => x.getAttribute("data-v"));
+    if (checked.length === boxes.length) delete olkColFilters[c.key]; else olkColFilters[c.key] = new Set(checked);
+    olkApplyFilters();
+  };
+  allCb.addEventListener("change", () => { pop.querySelectorAll("input[data-v]").forEach(x => { x.checked = allCb.checked; }); apply(); });
+  pop.append(el("label", {}, allCb, el("strong", { text: " (전체)" })));
+  values.forEach(v => {
+    const cb = el("input", { type: "checkbox" }); cb.setAttribute("data-v", v); cb.checked = !sel || sel.has(v);
+    cb.addEventListener("change", () => { allCb.checked = [...pop.querySelectorAll("input[data-v]")].every(x => x.checked); apply(); });
+    pop.append(el("label", {}, cb, " " + v));
+  });
+  document.body.append(pop);
+  const rect = btn.getBoundingClientRect();
+  pop.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - pop.offsetWidth - 8)) + "px";
+  pop.style.top = (rect.bottom + 4) + "px";
+  olkPop = pop;
+}
+async function olkLoad() {
+  const base = olkEls.url.value.trim().replace(/\/+$/, "");
+  if (!/^https?:\/\/[\w.:-]+$/.test(base)) { olkEls.status.textContent = "연결 주소가 올바르지 않습니다 (예: http://127.0.0.1:8765)."; return; }
+  try { localStorage.setItem(OLK_URL_KEY, base); } catch { /* 저장 못 함 */ }
+  olkEls.run.disabled = true; olkEls.status.textContent = "Outlook 받은편지함을 읽는 중…"; olkEls.list.replaceChildren();
+  try {
+    const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), 30000);
+    const res = await fetch(base + "/mails?n=" + ((olkEls.n && olkEls.n.value) || 100), { signal: ctrl.signal }); clearTimeout(t);
+    const data = await res.json().catch(() => null);
+    if (!data || !data.ok) throw new Error(data && data.error ? String(data.error).slice(0, 200) : "브리지가 오류를 돌려줬습니다.");
+    olkRenderList(data.mails || []);
+    olkEls.status.textContent = `받은편지함 ${data.count}건 (${olkFmtDate(data.at)} 기준) — 메일을 고르면 오른쪽에 그 선박 기능이 나옵니다.`;
+  } catch (err) {
+    olkEls.status.textContent = err.name === "AbortError" ? "응답이 30초 넘게 없어 중단했습니다."
+      : "브리지에 연결하지 못했습니다 — 'BWTS Outlook 연결' 프로그램(RESULT/outlook-bridge)이 켜져 있는지, 주소·포트가 맞는지 확인하세요.";
+  } finally { olkEls.run.disabled = false; }
+}
+olkEls.run.addEventListener("click", olkLoad);
+olkEls.mine.addEventListener("change", () => { if (olkAll.length) olkApplyFilters(); });
+olkEls.search.addEventListener("input", () => { if (olkAll.length) olkApplyFilters(); });
+olkEls.reset.addEventListener("click", () => { olkColFilters = {}; olkEls.search.value = ""; olkClosePop(); if (olkAll.length) olkApplyFilters(); });
+(() => { const c = document.getElementById("olkConn"), t = document.getElementById("olkConnToggle"); if (c && t) t.addEventListener("click", () => { const open = c.hidden; c.hidden = !open; t.setAttribute("aria-expanded", String(open)); t.textContent = open ? "연결 주소 ▴" : "연결 주소 ▾"; }); })();
+(() => { const ctrl = document.getElementById("olkCtrl"), t = document.getElementById("olkCtrlToggle"); if (ctrl && t) t.addEventListener("click", () => { const open = !ctrl.hidden; ctrl.hidden = open; t.setAttribute("aria-expanded", String(!open)); t.textContent = open ? "펼치기 ▾" : "접기 ▴"; }); })();
+(() => { const card = document.querySelector(".ledger"), btn = document.getElementById("ledSetupToggle"); if (!card || !btn) return; const KEY = "bwtsMroSetupCollapsed";
+  const set = on => { card.classList.toggle("setup-collapsed", on); btn.textContent = on ? "⚙ 설정 펼치기 ▾" : "⚙ 설정 접기 ▴"; try { localStorage.setItem(KEY, on ? "1" : "0"); } catch {} };
+  try { if (localStorage.getItem(KEY) === "1") set(true); } catch {}
+  btn.addEventListener("click", () => set(!card.classList.contains("setup-collapsed"))); })();
+/* 완료 보고 메일 발송 → 시트 D열(헐넘버 셀) 빨강 (체크 해제 시 되돌림) — markDone 통로 (v10) */
+async function writeDoneMail(x, done) {
+  if (!live.url) throw new Error("연결 없음");
+  const res = await fetch(live.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({ token: live.token, action: "markDone", sheet: LIVE_SHEETS.main, row: x.rowNo, vessel: x.vessel, po: x.po, done: done }) });
+  const data = await res.json().catch(() => null);
+  if (!data) throw new Error("응답을 읽지 못했습니다. Apps Script를 새 코드로 다시 배포했는지 확인하세요.");
+  if (!data.ok) throw new Error(data.error === "unauthorized" ? "토큰이 맞지 않습니다." : String(data.error || "알 수 없는 오류").slice(0, 200));
+  if (data.done === undefined) throw new Error("Apps Script가 아직 예전 코드입니다. 새 Code.gs로 바꿔 다시 배포하세요.");
+  return data;
+}
+/* 기항지 일정 확정 → 관리대장 반영 (v9): 해당 행 C~V 노란색 + S열 "11/20 해외배송" (기존 값이 있으면 "[기존 값]" 덧붙임) */
+const SHIP_TYPES = ["해외배송", "국내배송", "핸드캐리"];
+const syncDraft = {}; // 카드별 입력 중인 날짜·배송 방식 (화면을 다시 그려도 유지)
+let syncSeq = 0;
+function prepValue(dateStr, ship) { const d = parseDate(dateStr); return d && ship ? `${d.getMonth() + 1}/${d.getDate()} ${ship}` : ""; }
+function schedulePanel(x) {
+  const dr = syncDraft[x.key] || (syncDraft[x.key] = { date: "", ship: "" });
+  const done = (taskChecks[x.key] || {})._sync;
+  const id = "sc" + (syncSeq++);
+  const date = el("input", { type: "date", id: id + "d" }); date.value = dr.date;
+  const ship = el("select", { id: id + "s" }, el("option", { value: "", text: "(고르세요)" }), ...SHIP_TYPES.map(s => el("option", { value: s, text: s }))); ship.value = dr.ship;
+  const preview = el("div", { class: "hint" });
+  const msg = el("div", { class: "hint", "aria-live": "polite" });
+  const btn = el("button", { type: "button", class: "btn btn-primary", text: "관리대장에 반영" });
+  const canWrite = led.source === "live" && !!live.url;
+  const upd = () => {
+    dr.date = date.value; dr.ship = ship.value;
+    const v = prepValue(dr.date, dr.ship);
+    preview.textContent = v ? `S열에 들어갈 값: ${x.prepDue && !x.prepDue.startsWith(v) ? `${v} [${x.prepDue}]` : v}${x.prepDue ? ` (지금 값: ${x.prepDue})` : ""}` : "날짜와 배송 방식을 고르면 S열에 들어갈 값이 보입니다.";
+    btn.disabled = !v || !canWrite;
+  };
+  date.addEventListener("input", upd); ship.addEventListener("change", upd); upd();
+  if (!canWrite) msg.textContent = "구글 시트에 연결돼 있어야 반영할 수 있습니다 (맨 위 \"구글 시트에서 바로 불러오기\").";
+  btn.addEventListener("click", async () => {
+    const v = prepValue(dr.date, dr.ship); if (!v) return;
+    btn.disabled = true; msg.textContent = "관리대장에 반영하는 중…";
+    try {
+      const res = await fetch(live.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ token: live.token, action: "confirmSchedule", sheet: LIVE_SHEETS.main, row: x.rowNo, vessel: x.vessel, po: x.po, value: v }) });
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error("응답을 읽지 못했습니다. Apps Script를 새 코드로 다시 배포했는지 확인하세요.");
+      if (!data.ok) throw new Error(data.error === "unauthorized" ? "토큰이 맞지 않습니다." : String(data.error || "알 수 없는 오류").slice(0, 200));
+      // 예전 Code.gs(읽기만)가 배포돼 있으면 반영 요청을 읽기로 처리해 버림 → 반영 결과(row·value)가 없으면 실패로 봄
+      if (data.row === undefined || data.value === undefined) throw new Error("Apps Script가 아직 예전 코드(읽기만)입니다. 새 Code.gs로 바꾸고 [배포 관리 → 수정 → 새 버전]으로 다시 배포하세요.");
+      const o = taskChecks[x.key] || (taskChecks[x.key] = {});
+      o._sync = { value: data.value, at: hhmm(new Date()), color: data.color, row: data.row };
+      try { localStorage.setItem(TASK_STORE, JSON.stringify(taskChecks)); } catch { /* 기록만 못 남김 — 시트에는 반영됨 */ }
+      delete syncDraft[x.key];
+      liveRefresh(false); // 시트의 새 값으로 다시 읽기
+    } catch (err) {
+      msg.textContent = (err instanceof TypeError ? "구글에 연결하지 못했습니다. 인터넷·회사망을 확인하세요." : err.message) + " — 시트는 바뀌지 않았습니다.";
+      btn.disabled = false;
+    }
+  });
+  return el("div", { class: "sync-box" },
+    el("div", { class: "label", text: "관리대장에 일정 확정 반영 (C~V 노란색 + S열)" }),
+    done ? el("div", { class: "hint" }, dot("success"), `${done.at} 반영됨 — ${done.row}행, S열 "${done.value}"`) : null,
+    el("div", { class: "field" }, el("label", { for: id + "d", text: "센서 준비완료 필요 날짜" }), date),
+    el("div", { class: "field" }, el("label", { for: id + "s", text: "배송 방식" }), ship),
+    preview, btn, msg);
+}
+// 토큰 만들기 — 이 PC 안에서 무작위로 만들어 보여주기만 함 (저장·전송 안 함)
+liveEls.tokenBtn.addEventListener("click", () => {
+  const b = new Uint8Array(24); crypto.getRandomValues(b);
+  liveEls.tokenOut.textContent = [...b].map(x => x.toString(16).padStart(2, "0")).join("");
+  liveEls.tokenOut.hidden = false;
+});
+
+/* 검사용: 판정 로직을 기준일을 바꿔 확인할 수 있도록 노출 (화면 동작에는 영향 없음) */
+window.MROHelper = { evaluate, buildDrafts, RULES, TAGS, parseCsv, parseLooseDate, ledStage, guessMap };
+</script>
+<script>
+/* ===== 데모 전용 주입 (가짜 예시 데이터로 전체 UI 작동) — 실제 데이터/네트워크 없음 ===== */
+(function () {
+  function run() {
+    try {
+      var b = document.createElement("div");
+      b.textContent = "⚠ 데모 화면 — 가짜 예시 데이터입니다 (실제 관리대장·Outlook·고객 정보 아님). 기능을 둘러보는 용도입니다.";
+      b.style.cssText = "background:#9a6a12;color:#fff;padding:10px 16px;text-align:center;font-size:13px;line-height:1.5";
+      document.body.insertBefore(b, document.body.firstChild);
+
+      var header = ["선명", "고객사", "PO 번호", "담당자", "교정 만료일", "승선 예정일", "비고", "출고일", "실적 일자", "구품회수", "정산 비고"];
+      var rows = [header,
+        ["MSC DEMO ALPHA", "MSC CYPRUS", "DEMO-1001", "류경엽", "2026-11-25", "2026-11-20", "센서 2EA", "", "", "", ""],
+        ["MSC DEMO BETA", "MSC CYPRUS", "DEMO-1002", "류경엽", "2027-02-10", "2027-02-05", "", "", "", "", ""],
+        ["OCEAN DEMO GAMMA", "OCEAN LINE", "DEMO-2001", "홍길동", "2026-12-05", "2026-11-30", "10m 케이블", "2026-11-18", "", "", ""],
+        ["STAR DEMO DELTA", "STAR BULK", "DEMO-3001", "류경엽", "2026-11-15", "2026-11-12", "", "2026-11-05", "2026-11-12", "V", "수금완료"],
+        ["MSC DEMO EPSILON", "MSC CYPRUS", "DEMO-1003", "김담당", "2027-03-20", "2027-03-15", "", "", "", "", ""],
+        ["OCEAN DEMO ZETA", "OCEAN LINE", "DEMO-2002", "홍길동", "2026-11-08", "2026-11-02", "", "2026-10-28", "2026-11-02", "!", "청구완료"],
+        ["PACIFIC DEMO ETA", "PACIFIC LINES", "DEMO-4001", "류경엽", "2027-01-30", "2027-01-25", "", "", "", "", ""],
+        ["MSC DEMO THETA", "MSC CYPRUS", "DEMO-1004", "김담당", "2026-12-28", "2026-12-22", "", "", "", "", ""]
+      ];
+      if (window.ledSetMain) ledSetMain(rows, 2026, "데모 관리대장 2026", false, "file");
+
+      var mails = [
+        { subject: "RE: MSC DEMO ALPHA - BWTS Annual Calibration Attendance", sender: "Demo Superintendent", received: "2026-11-10 09:15", preview: "Dear Sir,\n\nThank you for your proposal. 20/21 November is acceptable for MSC DEMO ALPHA at Busan. PO DEMO-1001.\n\nBest regards,\nDemo Superintendent", id: "" },
+        { subject: "OCEAN DEMO GAMMA - sensor calibration schedule", sender: "Ocean Line Ops", received: "2026-11-09 14:40", preview: "Please advise the attendance schedule for OCEAN DEMO GAMMA (PO DEMO-2001). Vessel calls Singapore end of this month.", id: "" },
+        { subject: "[PANASIA] BWTS Service completion - STAR DEMO DELTA", sender: "Service Team", received: "2026-11-08 11:00", preview: "Service for STAR DEMO DELTA completed. Old sensors returned. Please proceed with the invoice. PO DEMO-3001.", id: "" },
+        { subject: "Fwd: MSC DEMO EPSILON long-term schedule", sender: "MSC Planning", received: "2026-11-07 16:20", preview: "Sharing the vessel long-term schedule for MSC DEMO EPSILON (DEMO-1003). Asia calls expected in Q1.", id: "" },
+        { subject: "Weekly maritime newsletter", sender: "news@example.com", received: "2026-11-06 08:00", preview: "This week in shipping... (관리대장과 무관한 메일 예시 — 대조 안 됨)", id: "" },
+        { subject: "RE: OCEAN DEMO ZETA old sensor return", sender: "Ocean Line Ops", received: "2026-11-05 10:30", preview: "Regarding OCEAN DEMO ZETA (DEMO-2002) old sensor return - we will arrange the shipment next week.", id: "" }
+      ];
+      var runBtn = document.getElementById("olkRun");
+      if (runBtn && window.olkRenderList) {
+        var clone = runBtn.cloneNode(true); runBtn.replaceWith(clone);
+        var fill = function () { olkRenderList(mails); var s = document.getElementById("olkStatus"); if (s) s.textContent = "데모 받은편지함 " + mails.length + "건 (가짜 예시) — 메일을 고르면 오른쪽에 내용·기능이 나옵니다."; };
+        clone.addEventListener("click", fill);
+        fill();
+      }
+      ["olkConn", "olkConnToggle"].forEach(function (id) { var e = document.getElementById(id); if (e) e.remove(); });
+      var live = document.getElementById("live-title"); if (live && live.closest(".ai-box")) live.closest(".ai-box").remove();
+      var card = document.querySelector(".ledger"); if (card) card.classList.add("setup-collapsed");
+      var stog = document.getElementById("ledSetupToggle"); if (stog) stog.textContent = "⚙ 설정 펼치기 ▾";
+    } catch (e) { console.error("demo seed error", e); }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run); else run();
+})();
+</script>
+
+</body>
+</html>
